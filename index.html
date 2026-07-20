@@ -1382,6 +1382,19 @@
           <option value="new">⭐ Yellow — New Contact</option>
         </select>
       </div>
+      <div class="form-group" id="apptRepeatGroup"><label class="form-label">Repeats</label>
+        <select class="form-select" id="apptRepeat" onchange="document.getElementById('apptRepeatUntilRow').style.display = this.value==='none'?'none':'block'">
+          <option value="none">Does not repeat</option>
+          <option value="daily">Every day</option>
+          <option value="weekly">Every week</option>
+          <option value="biweekly">Every 2 weeks</option>
+          <option value="monthly">Every month</option>
+        </select>
+        <div id="apptRepeatUntilRow" style="display:none;margin-top:8px;">
+          <label class="form-label">Repeat until (optional — 1 year max)</label>
+          <input class="form-input" type="date" id="apptRepeatUntil">
+        </div>
+      </div>
       <div class="form-group"><label class="form-label">Notes (optional)</label>
         <input class="form-input" id="apptNotes" placeholder="e.g. Bring lease documents">
       </div>
@@ -1401,6 +1414,7 @@
       </div>
       <button class="btn btn-green btn-block" id="apptSaveBtn" onclick="saveAppointment()">✓ Add to Calendar</button>
       <button class="btn btn-outline btn-block btn-sm" id="apptDeleteBtn" style="display:none;color:var(--pink-dark);border-color:var(--pink-light);margin-top:8px;" onclick="deleteApptFromSheet()">Delete Appointment</button>
+      <button class="btn btn-outline btn-block btn-sm" id="apptDeleteSeriesBtn" style="display:none;color:var(--pink-dark);border-color:var(--pink-light);margin-top:8px;" onclick="deleteApptSeriesFromSheet()">Delete Whole Series 🔁</button>
     </div>
   </div>
 </div>
@@ -2448,7 +2462,7 @@
     contacts:     { table: 'contacts',     order: 'added',
                     cols: { firstName:'first_name', lastName:'last_name', company:'company', email:'email', phone:'phone', cat:'cat', notes:'notes', color:'color', added:'added' } },
     appointments: { table: 'appointments', order: 'date',
-                    cols: { title:'title', date:'date', time:'time', cat:'cat', notes:'notes', color:'color', created:'created' } },
+                    cols: { title:'title', date:'date', time:'time', cat:'cat', notes:'notes', color:'color', created:'created', repeat:'repeat', seriesId:'series_id' } },
     tasks:        { table: 'crm_tasks',    order: 'created',
                     cols: { title:'title', priority:'priority', due:'due', done:'done', created:'created' } },
     emailLogs:    { table: 'email_logs',   order: 'date',
@@ -2484,6 +2498,27 @@
     });
   }
 
+  // Insert with a fallback: if the database doesn't have a newer column
+  // yet (SQL not run), strip the new fields, retry, and say which SQL to run.
+  const NEWER_COLS = ['repeat', 'series_id'];
+  function _sbInsert(k, rows) {
+    sb.from(SB_TABLES[k].table).insert(rows).then(({ error }) => {
+      if (!error) return;
+      const missingNewCol = (error.code === 'PGRST204' || /column/i.test(error.message || '')) &&
+        NEWER_COLS.some(c => (error.message || '').includes(c));
+      if (missingNewCol) {
+        const stripped = rows.map(r => { const c = { ...r }; NEWER_COLS.forEach(x => delete c[x]); return c; });
+        sb.from(SB_TABLES[k].table).insert(stripped).then(({ error: e2 }) => {
+          if (e2) { console.error('add ' + k, e2); showToast('⚠️ Cloud save failed — check your connection'); }
+          else showToast('⚠️ Saved, but repeats need the recurring SQL — run it in Supabase');
+        });
+      } else {
+        console.error('add ' + k, error);
+        showToast('⚠️ Cloud save failed — check your connection');
+      }
+    }).catch(e => { console.error('add ' + k, e); showToast('⚠️ Cloud save failed — check your connection'); });
+  }
+
   async function loadAllData() {
     const keys = Object.keys(SB_TABLES);
     const results = await Promise.all(
@@ -2511,13 +2546,13 @@
     },
     add: (k, item) => {
       _cache[k] = [...(_cache[k] || []), item];
-      _sbWrite(sb.from(SB_TABLES[k].table).insert(toRow(k, item)), 'add ' + k);
+      _sbInsert(k, [toRow(k, item)]);
       return item;
     },
     addMany: (k, items) => {
       if (!items.length) return;
       _cache[k] = [...(_cache[k] || []), ...items];
-      _sbWrite(sb.from(SB_TABLES[k].table).insert(items.map(item => toRow(k, item))), 'add ' + k);
+      _sbInsert(k, items.map(item => toRow(k, item)));
     },
     del: (k, id) => {
       _cache[k] = (_cache[k] || []).filter(i => i.id !== id);
@@ -2569,7 +2604,7 @@
     sched.innerHTML = appts.map(a => `
       <div class="agenda-item" style="border:none;padding:10px 0;margin:0;cursor:pointer;" onclick="editAppt('${a.id}')">
         <div class="agenda-stripe" style="background:${a.color||'var(--sky)'};"></div>
-        <div class="agenda-info"><div class="agenda-title">${a.title}</div><div class="agenda-meta">${a.notes||''}</div><span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span></div>
+        <div class="agenda-info"><div class="agenda-title">${a.title}${a.seriesId?' 🔁':''}</div><div class="agenda-meta">${a.notes||''}</div><span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span></div>
         <div class="agenda-time">${fmtTime(a.time)}</div>
       </div>`).join('');
   }
@@ -2600,12 +2635,35 @@
   // ── SAVE / EDIT APPOINTMENT ──
   let _editApptId = null;
 
+  // Dates for a repeating series: capped at 1 year out (or the chosen
+  // end date). Monthly series skip months without that day (e.g. the 31st).
+  function generateOccurrences(baseIso, repeat, untilIso) {
+    const start = new Date(baseIso + 'T00:00:00');
+    const hardStop = new Date(start); hardStop.setFullYear(start.getFullYear() + 1);
+    let until = untilIso ? new Date(untilIso + 'T00:00:00') : hardStop;
+    if (until > hardStop) until = hardStop;
+    const caps = { daily: 366, weekly: 53, biweekly: 27, monthly: 12 };
+    const out = [];
+    for (let i = 0; i < (caps[repeat] || 1); i++) {
+      const d = new Date(start);
+      if (repeat === 'daily')    d.setDate(start.getDate() + i);
+      if (repeat === 'weekly')   d.setDate(start.getDate() + i * 7);
+      if (repeat === 'biweekly') d.setDate(start.getDate() + i * 14);
+      if (repeat === 'monthly')  { d.setMonth(start.getMonth() + i); if (d.getDate() !== start.getDate()) continue; }
+      if (d > until) break;
+      out.push(localISO(d));
+    }
+    return out;
+  }
+
   function saveAppointment() {
-    const title = (document.getElementById('apptTitle').value || '').trim();
-    const date  = document.getElementById('apptDate').value;
-    const time  = document.getElementById('apptTime').value;
-    const cat   = document.getElementById('apptCat').value || 'work';
-    const notes = (document.getElementById('apptNotes').value || '').trim();
+    const title  = (document.getElementById('apptTitle').value || '').trim();
+    const date   = document.getElementById('apptDate').value;
+    const time   = document.getElementById('apptTime').value;
+    const cat    = document.getElementById('apptCat').value || 'work';
+    const notes  = (document.getElementById('apptNotes').value || '').trim();
+    const repeat = document.getElementById('apptRepeat').value || 'none';
+    const until  = document.getElementById('apptRepeatUntil').value;
 
     if (!title) { showToast('⚠️ Please enter a title'); return; }
     if (!date)  { showToast('⚠️ Please select a date'); return; }
@@ -2613,6 +2671,16 @@
     if (_editApptId) {
       DB.update('appointments', _editApptId, { title, date, time, cat, notes, color: CAT_COLOR[cat] || 'var(--sky)' });
       showToast('✓ Appointment updated');
+    } else if (repeat !== 'none') {
+      const dates = generateOccurrences(date, repeat, until);
+      const seriesId = 'series_' + Date.now();
+      const now = new Date().toISOString();
+      DB.addMany('appointments', dates.map((d, i) => ({
+        id: 'appt_' + Date.now() + '_' + i, title, date: d, time, cat, notes,
+        color: CAT_COLOR[cat] || 'var(--sky)',
+        created: now, repeat, seriesId
+      })));
+      showToast('✓ ' + dates.length + ' appointments added (repeats ' + repeat + ')');
     } else {
       DB.add('appointments', {
         id: 'appt_' + Date.now(), title, date, time, cat, notes,
@@ -2644,9 +2712,13 @@
     document.getElementById('apptTime').value  = a.time  || '';
     document.getElementById('apptCat').value   = a.cat   || 'work';
     document.getElementById('apptNotes').value = a.notes || '';
-    document.getElementById('apptSheetTitle').textContent = 'Edit Appointment';
+    document.getElementById('apptSheetTitle').textContent = a.seriesId ? 'Edit Appointment 🔁' : 'Edit Appointment';
     document.getElementById('apptSaveBtn').textContent = '✓ Save Changes';
     document.getElementById('apptDeleteBtn').style.display = '';
+    document.getElementById('apptDeleteBtn').textContent = a.seriesId ? 'Delete Just This One' : 'Delete Appointment';
+    document.getElementById('apptDeleteSeriesBtn').style.display = a.seriesId ? '' : 'none';
+    // Repeat choice only applies when creating — hide it while editing
+    document.getElementById('apptRepeatGroup').style.display = 'none';
     openSheet('newAppt');
   }
 
@@ -2660,14 +2732,37 @@
     updateHomeStats();
   }
 
+  function deleteApptSeriesFromSheet() {
+    if (!_editApptId) return;
+    const a = DB.get('appointments').find(x => x.id === _editApptId);
+    if (!a || !a.seriesId) return;
+    const sid = a.seriesId;
+    const n = _cache.appointments.filter(x => x.seriesId === sid).length;
+    _cache.appointments = _cache.appointments.filter(x => x.seriesId !== sid);
+    _sbWrite(sb.from('appointments').delete().eq('series_id', sid), 'delete series');
+    closeSheet('newAppt');
+    buildCalendar();
+    refreshWeekViewIfVisible();
+    renderTodaySchedule();
+    updateHomeStats();
+    selectTodayAgenda();
+    showToast('✓ Series removed (' + n + ' appointments)');
+  }
+
   function resetApptSheet() {
     _editApptId = null;
     document.getElementById('apptTitle').value = '';
     document.getElementById('apptTime').value  = '';
     document.getElementById('apptNotes').value = '';
+    document.getElementById('apptRepeat').value = 'none';
+    document.getElementById('apptRepeatUntil').value = '';
+    document.getElementById('apptRepeatUntilRow').style.display = 'none';
+    document.getElementById('apptRepeatGroup').style.display = '';
     document.getElementById('apptSheetTitle').textContent = 'Add Appointment';
     document.getElementById('apptSaveBtn').textContent = '✓ Add to Calendar';
     document.getElementById('apptDeleteBtn').style.display = 'none';
+    document.getElementById('apptDeleteBtn').textContent = 'Delete Appointment';
+    document.getElementById('apptDeleteSeriesBtn').style.display = 'none';
   }
 
   function selectDayFromDate(d) {
@@ -3125,7 +3220,7 @@
       return `<div class="agenda-item">
         <div class="agenda-stripe" style="background:${a.color||'var(--sky)'};"></div>
         <div class="agenda-info">
-          <div class="agenda-title">${a.title}</div>
+          <div class="agenda-title">${a.title}${a.seriesId?' 🔁':''}</div>
           <div class="agenda-meta">${a.notes||''}</div>
           <span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span>
         </div>
