@@ -1958,6 +1958,95 @@
     if (n === 'addContact') resetContactSheet();
   }
 
+  // ── SETTINGS INNER TABS (Email Setup / Import Contacts / Sync Schedule) ──
+  function innerTab(key, el) {
+    document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    document.querySelectorAll('.inner-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('ipanel-' + key);
+    if (panel) panel.classList.add('active');
+  }
+
+  // ── ACCOUNT PICKERS (invite sheets + appointment sheet) ──
+  function pickAcct(el) {
+    const wrap = el.closest('.account-picker');
+    if (wrap) wrap.querySelectorAll('.acct-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  function pickAcctNavy(el) { pickAcct(el); }
+
+  // ── IMPORT SOURCE SELECTOR ──
+  const IMPORT_GUIDES = {
+    iphone: { title:'📱 How to export from iPhone / iCloud:', type:'.vcf (vCard)', steps:[
+      'On your iPhone: <b>Settings → [Your Name] → iCloud</b> → make sure <b>Contacts</b> is toggled ON',
+      'On a computer, go to <b>icloud.com</b> and sign in',
+      'Click <b>Contacts</b>',
+      'Press <code>Cmd+A</code> (Mac) or <code>Ctrl+A</code> (PC) to select all contacts',
+      'Click the <b>gear icon ⚙️</b> at the bottom left → <b>Export vCard</b>',
+      'A <code>.vcf</code> file downloads — tap the box below to upload it'
+    ]},
+    gmail: { title:'📧 How to export from Gmail / Google Contacts:', type:'.vcf (vCard)', steps:[
+      'Go to <b>contacts.google.com</b> and sign in',
+      'Click <b>Export</b> in the left-hand menu (under "Fix &amp; manage")',
+      'Choose <b>vCard (for iOS Contacts)</b>',
+      'Click <b>Export</b> — a <code>.vcf</code> file downloads; upload it below'
+    ]},
+    outlook: { title:'📘 How to export from Outlook / Microsoft 365:', type:'.csv', steps:[
+      'Go to <b>outlook.com</b> and open the <b>People</b> page',
+      'Click <b>Manage contacts → Export contacts</b>',
+      'Choose <b>All contacts</b> and click <b>Export</b>',
+      'A <code>.csv</code> file downloads — upload it below'
+    ]},
+    mac: { title:'💻 How to export from the Mac Contacts app:', type:'.vcf (vCard)', steps:[
+      'Open the <b>Contacts</b> app on your Mac',
+      'Press <code>Cmd+A</code> to select all contacts',
+      'Menu bar: <b>File → Export → Export vCard…</b>',
+      'Save the <code>.vcf</code> file and upload it below'
+    ]}
+  };
+
+  function selectSource(key, el) {
+    document.querySelectorAll('.import-source').forEach(s => {
+      s.classList.remove('selected');
+      const c = s.querySelector('.import-check');
+      if (c) c.textContent = '';
+    });
+    el.classList.add('selected');
+    const chk = el.querySelector('.import-check');
+    if (chk) chk.textContent = '✓';
+    const g = IMPORT_GUIDES[key];
+    if (!g) return;
+    document.getElementById('importSteps').innerHTML =
+      `<div class="import-steps-title">${g.title}</div><ol>${g.steps.map(s => `<li>${s}</li>`).join('')}</ol>`;
+    const ft = document.getElementById('importFileType');
+    if (ft) ft.textContent = g.type;
+  }
+
+  // ── EVENT INVITE FLYER UPLOAD + LAYOUT PICKER ──
+  function triggerFlyerUpload(prefix) {
+    let input = document.getElementById(prefix + '-flyer-file');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+      input.id = prefix + '-flyer-file';
+      document.body.appendChild(input);
+      input.addEventListener('change', () => {
+        const f = input.files[0];
+        if (!f) return;
+        const zone = document.getElementById(prefix + '-upload-zone');
+        if (zone) zone.innerHTML = `<img src="${URL.createObjectURL(f)}" style="max-width:100%;max-height:140px;border-radius:10px;" alt="Flyer">`;
+        const sect = document.getElementById(prefix + '-layout-section');
+        if (sect) sect.style.display = '';
+      });
+    }
+    input.click();
+  }
+
+  function setInvLayout(prefix, layout, el) {
+    document.querySelectorAll('#' + prefix + '-layout-section .layout-opt').forEach(o => o.classList.remove('active'));
+    if (el) el.classList.add('active');
+  }
+
   // ── TOAST ──
   function showToast(msg) {
     const t = document.getElementById('toast');
