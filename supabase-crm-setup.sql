@@ -62,6 +62,35 @@ create table if not exists public.email_logs (
   date       timestamptz default now()
 );
 
+-- ── CRM ADMINS (added 2026-07-20) ──
+-- Who can sign in and edit everything. Managed from the app's Settings
+-- sheet; each admin also needs a login (Authentication → Add user).
+create table if not exists public.crm_admins (
+  email text primary key
+);
+
+insert into public.crm_admins (email) values
+  ('robin@enjoyyourhaven.com'),
+  ('robin@hpdallas.com'),
+  ('robin@scoutre.net'),
+  ('robin@enjoyyouracorn.com')
+on conflict (email) do nothing;
+
+create or replace function public.is_crm_admin()
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.crm_admins
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  )
+$$;
+
+alter table public.crm_admins enable row level security;
+drop policy if exists "Admins manage admins" on public.crm_admins;
+create policy "Admins manage admins" on public.crm_admins
+  for all to authenticated using (public.is_crm_admin()) with check (public.is_crm_admin());
+
 -- ── ROW LEVEL SECURITY ──
 alter table public.contacts     enable row level security;
 alter table public.appointments enable row level security;
@@ -79,23 +108,23 @@ drop policy if exists "Signed-in full access" on public.crm_tasks;
 drop policy if exists "CRM owner access" on public.contacts;
 create policy "CRM owner access" on public.contacts
   for all to authenticated
-  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
-  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
+  using (public.is_crm_admin())
+  with check (public.is_crm_admin());
 
 drop policy if exists "CRM owner access" on public.appointments;
 create policy "CRM owner access" on public.appointments
   for all to authenticated
-  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
-  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
+  using (public.is_crm_admin())
+  with check (public.is_crm_admin());
 
 drop policy if exists "CRM owner access" on public.crm_tasks;
 create policy "CRM owner access" on public.crm_tasks
   for all to authenticated
-  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
-  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
+  using (public.is_crm_admin())
+  with check (public.is_crm_admin());
 
 drop policy if exists "CRM owner access" on public.email_logs;
 create policy "CRM owner access" on public.email_logs
   for all to authenticated
-  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
-  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
+  using (public.is_crm_admin())
+  with check (public.is_crm_admin());

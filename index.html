@@ -1059,26 +1059,17 @@
 
   <div class="evt-networking">
     <div class="section-header" style="color:#7A5C00;">🤝 Networking Events</div>
-    <div style="text-align:center;padding:28px 14px;background:var(--white);border:1px solid var(--border);border-radius:14px;color:var(--text-muted);font-size:13px;">
-      No networking events yet.<br>
-      <span style="color:var(--gold);cursor:pointer;font-weight:500;" onclick="openSheet('newEvent')">+ Create your first event</span>
-    </div>
+    <div id="evtList-networking"></div>
   </div>
 
   <div class="evt-work">
     <div class="section-header" style="color:var(--green-dark);">🟢 Work Events</div>
-    <div style="text-align:center;padding:28px 14px;background:var(--white);border:1px solid var(--border);border-radius:14px;color:var(--text-muted);font-size:13px;">
-      No work events yet.<br>
-      <span style="color:var(--green);cursor:pointer;font-weight:500;" onclick="openSheet('newEvent')">+ Create a work event</span>
-    </div>
+    <div id="evtList-work"></div>
   </div>
 
   <div class="evt-personal">
     <div class="section-header" style="color:var(--navy-dark);">🔵 Personal Events</div>
-    <div style="text-align:center;padding:28px 14px;background:var(--white);border:1px solid var(--border);border-radius:14px;color:var(--text-muted);font-size:13px;">
-      No personal events yet.<br>
-      <span style="color:var(--navy);cursor:pointer;font-weight:500;" onclick="openSheet('newPersonalEvent')">+ Create a personal event</span>
-    </div>
+    <div id="evtList-personal"></div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
@@ -1321,19 +1312,19 @@
     <div class="sheet-handle"></div>
     <div class="sheet-header"><div class="sheet-title">Create Event</div><button class="sheet-close" onclick="closeSheet('newEvent')">✕</button></div>
     <div class="sheet-body">
-      <div class="form-group"><label class="form-label">Event Name</label><input class="form-input" placeholder="e.g. DFW Real Estate Networking Night"></div>
+      <div class="form-group"><label class="form-label">Event Name</label><input class="form-input" id="evName" placeholder="e.g. DFW Real Estate Networking Night"></div>
       <div class="form-group"><label class="form-label">Color / Type</label>
-        <select class="form-select"><option>🤝 Gold — Networking</option><option>🟢 Green — Work / Business</option><option>🔴 Pink — Urgent</option></select>
+        <select class="form-select" id="evCat"><option value="networking">🤝 Gold — Networking</option><option value="work">🟢 Green — Work / Business</option><option value="urgent">🔴 Pink — Urgent</option></select>
       </div>
       <div class="form-2col">
-        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date"></div>
-        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time"></div>
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="evDate"></div>
+        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="evTime"></div>
       </div>
-      <div class="form-group"><label class="form-label">Location</label><input class="form-input" placeholder="Venue & address"></div>
-      <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" placeholder="Appears in invite email"></textarea></div>
+      <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="evLocation" placeholder="Venue & address"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="evDesc" placeholder="Appears in invite email"></textarea></div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-outline" style="flex:1;" onclick="closeSheet('newEvent');showToast('Draft saved')">Save Draft</button>
-        <button class="btn btn-gold" style="flex:1;" onclick="closeSheet('newEvent');openSheet('invite')">Send Invites →</button>
+        <button class="btn btn-gold" style="flex:1;" onclick="saveEvent(false)">✓ Save Event</button>
+        <button class="btn btn-outline" style="flex:1;" onclick="saveEvent(true)">Save + Invites →</button>
       </div>
     </div>
   </div>
@@ -1345,18 +1336,18 @@
     <div class="sheet-handle"></div>
     <div class="sheet-header"><div class="sheet-title">🔵 Personal Event</div><button class="sheet-close" onclick="closeSheet('newPersonalEvent')">✕</button></div>
     <div class="sheet-body">
-      <div class="form-group"><label class="form-label">Event Name</label><input class="form-input" placeholder="e.g. Birthday Dinner, Cookout"></div>
+      <div class="form-group"><label class="form-label">Event Name</label><input class="form-input" id="pevName" placeholder="e.g. Birthday Dinner, Cookout"></div>
       <div class="form-2col">
-        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date"></div>
-        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time"></div>
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="pevDate"></div>
+        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="pevTime"></div>
       </div>
-      <div class="form-group"><label class="form-label">Location</label><input class="form-input" placeholder="Address or venue"></div>
+      <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="pevLocation" placeholder="Address or venue"></div>
       <div class="form-group"><label class="form-label">Category</label>
-        <select class="form-select"><option>Family</option><option>Friends</option><option>Birthday / Anniversary</option><option>Holiday</option><option>Other Personal</option></select>
+        <select class="form-select" id="pevKind"><option>Family</option><option>Friends</option><option>Birthday / Anniversary</option><option>Holiday</option><option>Other Personal</option></select>
       </div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-outline" style="flex:1;" onclick="closeSheet('newPersonalEvent');showToast('🔵 Personal event saved')">Save</button>
-        <button class="btn btn-navy" style="flex:1;" onclick="closeSheet('newPersonalEvent');openSheet('personalInvite')">Send Invites →</button>
+        <button class="btn btn-navy" style="flex:1;" onclick="savePersonalEvent(false)">✓ Save Event</button>
+        <button class="btn btn-outline" style="flex:1;" onclick="savePersonalEvent(true)">Save + Invites →</button>
       </div>
     </div>
   </div>
@@ -1501,6 +1492,20 @@
           <div id="accountEmail" style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
         </div>
         <button class="btn btn-outline btn-sm" style="color:var(--pink-dark);border-color:var(--pink-light);flex-shrink:0;" onclick="handleLogout()">Sign Out</button>
+      </div>
+
+      <!-- CRM Admins -->
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:700;color:var(--navy-dark);margin-bottom:6px;">👑 CRM Admins</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+          Everyone listed here can sign in and edit everything in the CRM — contacts, calendar, emails, and events.
+          After adding someone, also create their login: Supabase → Authentication → Add user.
+        </div>
+        <div id="adminsList"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input class="form-input" id="newAdminEmail" type="email" placeholder="email@example.com" style="flex:1;">
+          <button class="btn btn-sky btn-sm" style="background:var(--sky);color:white;flex-shrink:0;" onclick="addAdmin()">+ Add</button>
+        </div>
       </div>
 
       <!-- Inner tabs -->
@@ -2531,6 +2536,10 @@
       else _cache[k] = (res.data || []).map(r => fromRow(k, r));
     });
     if (failed) showToast('⚠️ Some data failed to load — run the setup SQL in Supabase, then refresh');
+
+    // Admin list (optional — table may not exist until the admin SQL runs)
+    const ar = await sb.from('crm_admins').select('email').order('email');
+    _admins = ar.error ? [] : (ar.data || []).map(r => r.email);
   }
 
   const DB = {
@@ -2695,6 +2704,7 @@
     refreshWeekViewIfVisible();
     updateHomeStats();
     renderTodaySchedule();
+    renderEvents();
 
     // Jump calendar to the saved date's month
     const d = new Date(date + 'T00:00:00');
@@ -2745,6 +2755,7 @@
     refreshWeekViewIfVisible();
     renderTodaySchedule();
     updateHomeStats();
+    renderEvents();
     selectTodayAgenda();
     showToast('✓ Series removed (' + n + ' appointments)');
   }
@@ -2783,6 +2794,120 @@
 
   function refreshWeekViewIfVisible() {
     if (calView === 'week') buildWeekView();
+  }
+
+  // ── EVENTS (saved to the calendar like appointments) ──
+  function saveEvent(openInvites) {
+    const name = (document.getElementById('evName').value||'').trim();
+    const cat  = document.getElementById('evCat').value || 'networking';
+    const date = document.getElementById('evDate').value;
+    const time = document.getElementById('evTime').value;
+    const loc  = (document.getElementById('evLocation').value||'').trim();
+    const desc = (document.getElementById('evDesc').value||'').trim();
+    if (!name) { showToast('⚠️ Please enter an event name'); return; }
+    if (!date) { showToast('⚠️ Please select a date'); return; }
+    DB.add('appointments', {
+      id: 'event_' + Date.now(), title: name, date, time, cat,
+      notes: [loc, desc].filter(Boolean).join(' — '),
+      color: CAT_COLOR[cat] || 'var(--gold)',
+      created: new Date().toISOString()
+    });
+    closeSheet('newEvent');
+    ['evName','evDate','evTime','evLocation','evDesc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    buildCalendar(); refreshWeekViewIfVisible(); renderTodaySchedule(); updateHomeStats(); renderEvents();
+    showToast('✓ Event saved to calendar');
+    if (openInvites) openSheet('invite');
+  }
+
+  function savePersonalEvent(openInvites) {
+    const name = (document.getElementById('pevName').value||'').trim();
+    const date = document.getElementById('pevDate').value;
+    const time = document.getElementById('pevTime').value;
+    const loc  = (document.getElementById('pevLocation').value||'').trim();
+    const kind = document.getElementById('pevKind').value || '';
+    if (!name) { showToast('⚠️ Please enter an event name'); return; }
+    if (!date) { showToast('⚠️ Please select a date'); return; }
+    DB.add('appointments', {
+      id: 'event_' + Date.now(), title: name, date, time, cat: 'personal',
+      notes: [kind, loc].filter(Boolean).join(' — '),
+      color: CAT_COLOR.personal,
+      created: new Date().toISOString()
+    });
+    closeSheet('newPersonalEvent');
+    ['pevName','pevDate','pevTime','pevLocation'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    buildCalendar(); refreshWeekViewIfVisible(); renderTodaySchedule(); updateHomeStats(); renderEvents();
+    showToast('✓ Personal event saved');
+    if (openInvites) openSheet('personalInvite');
+  }
+
+  function renderEvents() {
+    const today = localISO(new Date());
+    const upcoming = DB.get('appointments')
+      .filter(a => a.date >= today)
+      .sort((a,b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')));
+    const groups = { networking: [], work: [], personal: [] };
+    upcoming.forEach(a => {
+      const g = (a.cat === 'networking' || a.cat === 'new') ? 'networking' : (a.cat === 'personal') ? 'personal' : 'work';
+      groups[g].push(a);
+    });
+    const row = a => `
+      <div class="agenda-item" style="cursor:pointer;" onclick="editAppt('${a.id}')">
+        <div class="agenda-stripe" style="background:${a.color||'var(--sky)'};"></div>
+        <div class="agenda-info">
+          <div class="agenda-title">${a.title}${a.seriesId?' 🔁':''}</div>
+          <div class="agenda-meta">${new Date(a.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}${a.time?' · '+fmtTime(a.time):''}${a.notes?' · '+a.notes:''}</div>
+        </div>
+      </div>`;
+    const empty = (color, sheet, label) =>
+      `<div style="text-align:center;padding:28px 14px;background:var(--white);border:1px solid var(--border);border-radius:14px;color:var(--text-muted);font-size:13px;margin-bottom:10px;">
+        Nothing coming up.<br><span style="color:${color};cursor:pointer;font-weight:500;" onclick="openSheet('${sheet}')">${label}</span></div>`;
+    const fill = (id, arr, color, sheet, label) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = arr.length ? arr.slice(0, 20).map(row).join('') : empty(color, sheet, label);
+    };
+    fill('evtList-networking', groups.networking, 'var(--gold)', 'newEvent', '+ Create a networking event');
+    fill('evtList-work',       groups.work,       'var(--green)', 'newEvent', '+ Create a work event');
+    fill('evtList-personal',   groups.personal,   'var(--navy)', 'newPersonalEvent', '+ Create a personal event');
+  }
+
+  // ── CRM ADMINS (who can sign in and edit everything) ──
+  let _admins = [];
+  let _myEmail = '';
+
+  function renderAdmins() {
+    const list = document.getElementById('adminsList');
+    if (!list) return;
+    if (!_admins.length) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Run the admin SQL in Supabase to activate this list.</div>';
+      return;
+    }
+    list.innerHTML = _admins.map(e => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--mist);font-size:13px;">
+        <span>${e}${e === _myEmail ? ' <span style="color:var(--text-muted);font-size:11px;">(you)</span>' : ''}</span>
+        ${e === _myEmail ? '' : `<span style="color:var(--pink-dark);cursor:pointer;font-size:11px;font-weight:600;" onclick="removeAdmin('${e}')">✕ Remove</span>`}
+      </div>`).join('');
+  }
+
+  async function addAdmin() {
+    const inp = document.getElementById('newAdminEmail');
+    const email = (inp.value || '').trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.includes('.')) { showToast('⚠️ Enter a valid email address'); return; }
+    if (_admins.includes(email)) { showToast('Already an admin'); return; }
+    const { error } = await sb.from('crm_admins').insert({ email });
+    if (error) { console.error(error); showToast('⚠️ Could not add — run the admin SQL in Supabase first'); return; }
+    _admins.push(email); _admins.sort();
+    inp.value = '';
+    renderAdmins();
+    showToast('✓ Added — now create their login in Supabase → Authentication');
+  }
+
+  async function removeAdmin(email) {
+    if (email === _myEmail) { showToast("You can't remove yourself"); return; }
+    const { error } = await sb.from('crm_admins').delete().eq('email', email);
+    if (error) { console.error(error); showToast('⚠️ Could not remove — check your connection'); return; }
+    _admins = _admins.filter(e => e !== email);
+    renderAdmins();
+    showToast('✓ Admin removed');
   }
 
   // ── SAVE / EDIT CONTACT ──
@@ -3238,6 +3363,7 @@
   function deleteAppt(id) {
     DB.del('appointments', id);
     buildCalendar();
+    renderEvents();
     showToast('Appointment removed');
     // Refresh current agenda view
     const hdr = document.getElementById('agendaHeader');
@@ -3583,6 +3709,7 @@
     const { data: { user } } = await sb.auth.getUser();
     const acctEl = document.getElementById('accountEmail');
     if (acctEl && user) acctEl.textContent = user.email;
+    _myEmail = (user && user.email ? user.email : '').toLowerCase();
     initApp();
   }
 
@@ -3598,6 +3725,8 @@
     renderContacts();
     renderTasks();
     updateHomeStats();
+    renderEvents();
+    renderAdmins();
     initDateFields();
     // Init manual entry voice memo
     const manualVmEl = document.getElementById('vm-manual-container');
