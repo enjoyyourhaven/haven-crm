@@ -1,0 +1,3277 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Haven CRM v1.0 | Haven Property Services | robin@enjoyyourhaven.com | Built with Claude -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Haven CRM">
+<meta name="theme-color" content="#0277BD">
+<meta name="description" content="Haven Property Services — CRM for contacts, calendar, email, and events">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='38' fill='%230277BD'/><rect x='0' y='85' width='180' height='5' fill='%23FFB300'/><text x='90' y='125' font-family='Georgia,serif' font-size='84' font-weight='700' fill='white' text-anchor='middle'>H</text></svg>">
+<title>Haven CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    /* ── BRAND PALETTE ── */
+    --gold:       #B8860B;  /* Networking */
+    --gold-light: #D4A017;
+    --gold-pale:  #FDF6E3;
+    --gold-bright:#F5C518;  /* New people (30-day yellow) */
+    --gold-bright-pale: #FFFDE7;
+
+    --green:      #2D7D46;  /* Work / business */
+    --green-light:#38A15A;
+    --green-pale: #E6F4EA;
+    --green-dark: #1E5C33;
+
+    --navy:       #1B3A6B;  /* Personal */
+    --navy-light: #24508F;
+    --navy-pale:  #E8EDF5;
+    --navy-dark:  #122849;
+
+    --pink:       #E91E8C;  /* Urgent */
+    --pink-light: #F06292;
+    --pink-pale:  #FCE4EC;
+    --pink-dark:  #C2185B;
+
+    /* ── OPEN SKY THEME ── */
+    --sky:        #0277BD;   /* Top & bottom bar */
+    --sky-dark:   #015B92;   /* Bottom tab bar (slightly deeper) */
+    --sky-light:  #0290DB;   /* Hover / lighter accent */
+    --sky-accent: #FFB300;   /* Accent stripe on topbar */
+
+
+    --cream:      #F8F6F1;
+    --white:      #FFFFFF;
+    --border:     #D6DCE8;
+    --mist:       #F0F2F6;
+    --slate:      #4A5568;
+    --text:       #1A202C;
+    --text-muted: #718096;
+
+    --safe-top:    env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --tabbar-h:    62px;
+
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: 'Inter', sans-serif; background: var(--cream); color: var(--text); display: flex; flex-direction: column; position: fixed; inset: 0; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    padding: calc(var(--safe-top) + 10px) 16px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid var(--sky-accent);
+    flex-shrink: 0; z-index: 50;
+    background: var(--sky);
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .topbar.mode-personal  { background: var(--sky); border-bottom-color: #90CAF9; }
+  .topbar.mode-all       { background: var(--sky); border-bottom-color: var(--sky-accent); }
+  .topbar-logo { font-family: 'Playfair Display', serif; color: var(--white); font-size: 17px; font-weight: 700; }
+  .topbar-logo span { color: var(--gold-light); transition: color 0.3s; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .topbar-avatar { width: 34px; height: 34px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--navy-dark); }
+
+  /* ── MODE TOGGLE ── */
+  .mode-toggle { display: flex; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 2px; }
+  .mode-btn { padding: 5px 10px; border-radius: 16px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.55); cursor: pointer; border: none; background: none; font-family: 'Inter', sans-serif; transition: all 0.2s; white-space: nowrap; }
+  .mode-btn.active-work     { background: var(--sky-light); color: var(--white); }
+  .mode-btn.active-personal { background: var(--navy);      color: var(--white); }
+  .mode-btn.active-all      { background: var(--sky-accent);color: var(--white); }
+
+  /* ── TAGLINE BAR ── */
+  .tagline-bar {
+    background: var(--white);
+    text-align: center;
+    padding: 7px 16px;
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid rgba(184,134,11,0.25);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .tagline-bar::before,
+  .tagline-bar::after {
+    content: '';
+    flex: 1;
+    max-width: 48px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold));
+    opacity: 0.5;
+  }
+  .tagline-bar::after {
+    background: linear-gradient(to left, transparent, var(--gold));
+  }
+
+
+  .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 16px calc(var(--tabbar-h) + var(--safe-bottom) + 20px); }
+  .screen { display: none; }
+  .screen.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+  .screen-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--text); font-weight: 700; margin-bottom: 2px; }
+  .screen-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+
+  /* ── MODE BANNER ── */
+  .mode-banner { display: none; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; font-weight: 500; align-items: center; gap: 8px; }
+  .mode-banner.show { display: flex; }
+  .mode-banner.work-banner     { background: #E3F2FD; color: var(--sky-dark); border: 1px solid #90CAF9; }
+  .mode-banner.personal-banner { background: var(--navy-pale);  color: var(--navy-dark);  border: 1px solid #BBDEFB; }
+
+  /* ── TAB BAR ── */
+  .tabbar { position: fixed; bottom:0; left:0; right:0; height: calc(var(--tabbar-h) + var(--safe-bottom)); padding-bottom: var(--safe-bottom); display: flex; border-top: 1px solid rgba(255,255,255,0.1); z-index: 60; background: var(--sky-dark); transition: background 0.3s; }
+  .tabbar.mode-personal { background: var(--sky-dark); }
+  .tabbar.mode-all      { background: var(--sky-dark); }
+  .tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:rgba(255,255,255,0.45); font-size:10px; font-weight:500; cursor:pointer; min-height:44px; user-select:none; transition: color 0.15s; }
+  .tab svg { width:22px; height:22px; }
+  .tab.active { color: var(--gold-light); }
+
+  /* ── CARDS ── */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+
+  /* ── STATS ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 13px 14px; border-left: 3px solid var(--green); }
+  .stat-card.s-gold   { border-left-color: var(--gold); }
+  .stat-card.s-navy   { border-left-color: var(--navy); }
+  .stat-card.s-pink   { border-left-color: var(--pink); }
+  .stat-card.s-yellow { border-left-color: var(--gold-bright); }
+  .stat-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-val   { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .stat-sub   { font-size: 11px; color: var(--text-muted); }
+
+  /* ── BUTTONS ── */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px 18px; min-height:44px; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; border:none; font-family:'Inter',sans-serif; transition:transform 0.1s, opacity 0.15s; }
+  .btn:active { transform:scale(0.97); opacity:0.85; }
+  .btn-green   { background:var(--green);       color:var(--white); }
+  .btn-gold    { background:var(--gold);         color:var(--white); }
+  .btn-navy    { background:var(--navy);         color:var(--white); }
+  .btn-pink    { background:var(--pink);         color:var(--white); }
+  .btn-yellow  { background:var(--gold-bright);  color:var(--text); }
+  .btn-outline { background:var(--white); color:var(--text); border:1.5px solid var(--border); }
+  .btn-block   { width:100%; }
+  .btn-sm      { padding:8px 14px; min-height:38px; font-size:13px; }
+  .quick-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+
+  /* ── LEGEND ── */
+  .color-legend { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:12px; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:500; color:var(--text-muted); }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* ── PILLS ── */
+  .pills-scroll { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; margin-bottom:12px; scrollbar-width:none; }
+  .pills-scroll::-webkit-scrollbar { display:none; }
+  .pill { padding:9px 16px; min-height:38px; border-radius:20px; font-size:13px; font-weight:500; cursor:pointer; border:1.5px solid var(--border); background:var(--white); color:var(--text-muted); white-space:nowrap; flex-shrink:0; display:flex; align-items:center; transition: all 0.15s; }
+  .pill.active-work     { background:var(--green); color:var(--white); border-color:var(--green); }
+  .pill.active-gold     { background:var(--gold);  color:var(--white); border-color:var(--gold); }
+  .pill.active-navy     { background:var(--navy);  color:var(--white); border-color:var(--navy); }
+  .pill.active-yellow   { background:var(--gold-bright); color:var(--text); border-color:var(--gold-bright); }
+  .pill.active-pink     { background:var(--pink);  color:var(--white); border-color:var(--pink); }
+  .pill.active          { background:var(--green); color:var(--white); border-color:var(--green); }
+
+  /* ── CONTACT ROWS ── */
+  .contact-row { display:flex; align-items:center; gap:12px; padding:13px 14px; background:var(--white); border:1px solid var(--border); border-radius:12px; margin-bottom:9px; cursor:pointer; min-height:44px; border-left: 4px solid transparent; transition: border-left-color 0.2s; }
+  .contact-row:active { background:var(--mist); }
+  .contact-row.cat-networking { border-left-color: var(--gold); }
+  .contact-row.cat-work       { border-left-color: var(--green); }
+  .contact-row.cat-personal   { border-left-color: var(--navy); }
+  .contact-row.cat-new        { border-left-color: var(--gold-bright); background: var(--gold-bright-pale); }
+  .contact-row.cat-urgent     { border-left-color: var(--pink); }
+  .contact-avatar { width:42px; height:42px; border-radius:50%; color:var(--white); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0; }
+  .contact-info   { flex:1; min-width:0; }
+  .contact-name   { font-size:14px; font-weight:600; color:var(--text); }
+  .contact-detail { font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* ── TAGS ── */
+  .tag { display:inline-block; padding:3px 9px; border-radius:12px; font-size:10px; font-weight:700; flex-shrink:0; letter-spacing:0.02em; }
+  .tag-networking { background:var(--gold-pale);         color:#7A5C00; border:1px solid var(--gold); }
+  .tag-work       { background:var(--green-pale);        color:var(--green-dark); border:1px solid #a5d6a7; }
+  .tag-personal   { background:var(--navy-pale);         color:var(--navy-dark); border:1px solid #90CAF9; }
+  .tag-new        { background:var(--gold-bright-pale);  color:#7A5C00; border:1px solid var(--gold-bright); }
+  .tag-urgent     { background:var(--pink-pale);         color:var(--pink-dark); border:1px solid var(--pink-light); }
+  .tag-owner      { background:var(--green-pale);        color:var(--green-dark); }
+  .tag-tenant     { background:#E8F5E9;                  color:#1B5E20; }
+  .tag-vendor     { background:#F3E8FF;                  color:#5B21B6; }
+  .tag-investor   { background:var(--gold-pale);         color:#7A5C00; border:1px solid var(--gold); }
+  .tag-referral   { background:#FFF8E1;                  color:#E65100; }
+  .tag-family     { background:var(--navy-pale);         color:var(--navy-dark); }
+  .tag-friend     { background:#EDE7F6;                  color:#4527A0; }
+
+  /* ── NEW BADGE ── */
+  .new-badge { background:var(--gold-bright); color:var(--text); font-size:9px; font-weight:700; padding:1px 6px; border-radius:8px; margin-left:6px; }
+
+  /* ── MONTH EVENT BARS ── */
+  .cal-day { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:4px; font-size:13px; color:var(--text); cursor:pointer; border-bottom:1px solid var(--mist); border-right:1px solid var(--mist); min-height:44px; gap:2px; }
+  .day-num { font-size:12px; font-weight:500; line-height:1; }
+  .cal-day.today .day-num { background:var(--gold); color:var(--white); width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:11px; }
+  .day-event-bars { display:flex; flex-direction:column; gap:1px; width:calc(100% - 4px); }
+  .day-event-bar { height:4px; border-radius:2px; width:100%; }
+  .day-more { font-size:8px; color:var(--text-muted); font-weight:600; line-height:1; text-align:left; padding-left:1px; }
+
+  /* ── SIDE-BY-SIDE AGENDA ── */
+  .agenda-sidebyside { margin-bottom:9px; }
+  .sbs-time { font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:5px; padding-left:2px; }
+  .sbs-events { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .sbs-event { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:10px 10px 10px 8px; cursor:pointer; }
+  .sbs-event:active { background:var(--mist); }
+  .sbs-event-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px; }
+  .sbs-event-meta  { font-size:11px; color:var(--text-muted); margin-bottom:5px; }
+
+  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .cal-month  { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--text); }
+  .cal-nav-btn { width:40px; height:40px; border-radius:10px; background:var(--white); border:1.5px solid var(--border); font-size:16px; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .cal-nav-btn:active { background:var(--mist); }
+  .cal-grid { background:var(--white); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:12px; }
+  .cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); background:var(--sky); }
+  .cal-weekday  { text-align:center; font-size:10px; font-weight:600; color:rgba(255,255,255,0.7); text-transform:uppercase; padding:8px 0; }
+  .cal-days { display:grid; grid-template-columns:repeat(7,1fr); }
+  .cal-day.other-month { color:#C5CCD9; }
+  .cal-day.selected { background:var(--mist); }
+  .day-dot { width:5px; height:5px; border-radius:50%; }
+  .dot-gold   { background:var(--gold); }
+  .dot-green  { background:var(--green); }
+  .dot-navy   { background:var(--navy); }
+  .dot-pink   { background:var(--pink); }
+  .dot-yellow { background:var(--gold-bright); }
+
+  .cal-legend { display:flex; flex-wrap:wrap; gap:10px; font-size:11px; color:var(--text-muted); margin-bottom:14px; }
+  .cal-legend span { display:flex; align-items:center; gap:5px; }
+
+  /* ── AGENDA ── */
+  .agenda-item { display:flex; gap:12px; padding:13px 14px; background:var(--white); border:1px solid var(--border); border-radius:12px; margin-bottom:9px; cursor:pointer; }
+  .agenda-item:active { background:var(--mist); }
+  .agenda-stripe { width:4px; border-radius:4px; flex-shrink:0; }
+  .agenda-info { flex:1; min-width:0; }
+  .agenda-title { font-size:14px; font-weight:600; color:var(--text); }
+  .agenda-meta  { font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .agenda-contact { font-size:11px; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:5px; }
+  .agenda-time { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; }
+  .agenda-item.urgent-item { border-color:var(--pink-light); background:var(--pink-pale); }
+
+  /* ── EVENTS ── */
+  .event-card { background:var(--white); border:1px solid var(--border); border-radius:14px; padding:15px; margin-bottom:12px; display:flex; gap:13px; }
+  .event-date-box { width:52px; height:56px; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+  .event-month { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; }
+  .event-day   { font-size:21px; font-weight:700; color:var(--white); line-height:1.1; }
+  .event-info  { flex:1; min-width:0; }
+  .event-name  { font-family:'Playfair Display',serif; font-size:15px; font-weight:600; color:var(--text); }
+  .event-meta  { font-size:12px; color:var(--text-muted); margin:3px 0 6px; }
+  .event-status { font-size:12px; font-weight:600; }
+
+  /* ── EVENT DATE BOX COLORS ── */
+  .ebox-gold   { background:var(--gold);         } .ebox-gold   .event-month { color:#FDF6E3; }
+  .ebox-green  { background:var(--green);        } .ebox-green  .event-month { color:#c8e6c9; }
+  .ebox-navy   { background:var(--navy);         } .ebox-navy   .event-month { color:#BBDEFB; }
+  .ebox-pink   { background:var(--pink);         } .ebox-pink   .event-month { color:#FCE4EC; }
+  .ebox-yellow { background:var(--gold-bright);  } .ebox-yellow .event-month { color:#795548; } .ebox-yellow .event-day { color:var(--text); }
+  .ebox-draft  { background:var(--slate);        } .ebox-draft  .event-month { color:#ccc; }
+
+  /* ── INBOX ── */
+  .inbox-item { display:flex; gap:11px; padding:13px 14px; background:var(--white); border:1px solid var(--border); border-radius:12px; margin-bottom:9px; cursor:pointer; align-items:flex-start; }
+  .inbox-item:active { background:var(--mist); }
+  .inbox-item.unread { border-left:3px solid var(--gold); }
+  .inbox-item.urgent { border-left:3px solid var(--pink); background:var(--pink-pale); }
+  .inbox-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--white); flex-shrink:0; }
+  .inbox-content { flex:1; min-width:0; }
+  .inbox-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .inbox-from { font-size:13px; font-weight:600; color:var(--text); }
+  .inbox-time { font-size:11px; color:var(--text-muted); white-space:nowrap; display:flex; align-items:center; gap:4px; }
+  .inbox-subject { font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+
+  /* ── EMAIL ACCOUNTS ── */
+  .email-account { display:flex; align-items:center; gap:12px; padding:13px; border:1px solid var(--border); border-radius:12px; background:var(--white); margin-bottom:9px; }
+  .email-account-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+  .email-account-info { flex:1; min-width:0; }
+  .email-account-name { font-size:13px; font-weight:600; }
+  .email-account-addr { font-size:11px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status-connected { font-size:11px; font-weight:600; background:var(--green-pale); color:var(--green-dark); padding:4px 9px; border-radius:12px; flex-shrink:0; }
+
+  /* ── SCAN ── */
+  .card-drop-zone { border:2px dashed var(--border); border-radius:14px; padding:34px 20px; text-align:center; cursor:pointer; background:var(--white); margin-bottom:14px; transition:all 0.2s; }
+  .card-drop-zone:active { background:var(--mist); }
+  .card-drop-zone.scanning { border-color:var(--gold-bright); background:var(--gold-bright-pale); animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.65;} }
+  .drop-icon { font-size:40px; margin-bottom:10px; }
+  .drop-text { font-size:13px; color:var(--text-muted); line-height:1.5; }
+  .drop-text strong { color:var(--text); }
+  .scan-progress { display:none; align-items:center; gap:10px; padding:12px 14px; background:var(--gold-bright-pale); border:1px solid var(--gold-bright); border-radius:10px; font-size:13px; margin-bottom:12px; }
+  .scan-progress.show { display:flex; }
+  .spinner { width:18px; height:18px; border:2px solid var(--gold-bright); border-top-color:transparent; border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
+  @keyframes spin { to{transform:rotate(360deg);} }
+  .scan-result { display:none; background:var(--gold-bright-pale); border:1px solid var(--gold-bright); border-radius:12px; padding:14px; margin-bottom:12px; font-size:13px; }
+  .scan-result.show { display:block; }
+  .scan-result-label { font-weight:700; color:#7A5C00; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+  .scan-field { display:flex; gap:8px; margin-bottom:5px; }
+  .scan-field b { color:var(--green-dark); min-width:72px; text-transform:capitalize; font-weight:600; }
+
+  /* ── FORMS ── */
+  .form-group { margin-bottom:13px; }
+  .form-label { display:block; font-size:11px; font-weight:600; color:var(--green-dark); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px; }
+  .form-input, .form-select, .form-textarea { width:100%; border:1.5px solid var(--border); border-radius:10px; padding:12px 13px; min-height:44px; font-size:15px; font-family:'Inter',sans-serif; color:var(--text); outline:none; background:var(--white); -webkit-appearance:none; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--green); }
+  .form-textarea { min-height:80px; resize:vertical; }
+  .form-2col { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  /* ── SEGMENTED CONTROL ── */
+  .seg-control { display:flex; background:var(--mist); border-radius:10px; padding:3px; gap:2px; margin-bottom:14px; }
+  .seg-btn { flex:1; padding:8px; border-radius:8px; border:none; background:none; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; }
+  .seg-btn.active      { background:var(--white); color:var(--green-dark); box-shadow:0 1px 4px rgba(0,0,0,0.1); font-weight:600; }
+  .seg-btn.active-gold { background:var(--white); color:var(--gold); box-shadow:0 1px 4px rgba(0,0,0,0.1); font-weight:600; }
+  .seg-btn.active-navy { background:var(--white); color:var(--navy); box-shadow:0 1px 4px rgba(0,0,0,0.1); font-weight:600; }
+
+  /* ── URGENT TASKS ── */
+  .task-item { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:12px; margin-bottom:9px; }
+  .task-item.urgent { border-left:4px solid var(--pink); background:var(--pink-pale); }
+  .task-item.normal { border-left:4px solid var(--green); }
+  .task-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .task-item.urgent .task-check { border-color:var(--pink); }
+  .task-text { flex:1; font-size:13px; }
+  .task-due  { font-size:11px; font-weight:600; }
+  .task-item.urgent .task-due { color:var(--pink-dark); }
+  .task-item.normal .task-due { color:var(--green-dark); }
+
+  /* ── SHEET ── */
+  .sheet-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:100; align-items:flex-end; justify-content:center; }
+  .sheet-backdrop.open { display:flex; }
+  .sheet { background:var(--white); border-radius:20px 20px 0 0; width:100%; max-width:640px; max-height:88vh; overflow-y:auto; -webkit-overflow-scrolling:touch; animation:slideUp 0.25s ease; padding-bottom:calc(var(--safe-bottom) + 16px); }
+  @keyframes slideUp { from{transform:translateY(40px);opacity:0;}to{transform:none;opacity:1;} }
+  .sheet-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:10px auto 4px; }
+  .sheet-header { padding:10px 18px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--white); z-index:5; }
+  .sheet-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:var(--text); }
+  .sheet-close { width:36px; height:36px; border-radius:50%; background:var(--mist); border:none; font-size:16px; color:var(--slate); cursor:pointer; }
+  .sheet-body { padding:16px 18px; }
+
+  /* ── RECIPIENTS ── */
+  .invite-recipients { display:flex; flex-wrap:wrap; gap:6px; padding:10px; border:1.5px solid var(--border); border-radius:10px; min-height:48px; margin-bottom:10px; }
+  .recipient-tag { background:var(--mist); color:var(--text); font-size:12px; font-weight:500; padding:6px 10px; border-radius:14px; display:flex; align-items:center; gap:6px; }
+  .recipient-tag span { cursor:pointer; opacity:0.6; font-size:14px; }
+  .email-preview { background:var(--cream); border:1px solid var(--border); border-radius:12px; padding:14px; font-size:13px; line-height:1.6; margin-top:12px; overflow:hidden; }
+  .email-preview-header { border-radius:10px 10px 0 0; padding:13px 14px; margin:-14px -14px 12px; }
+  .eprev-logo { font-family:'Playfair Display',serif; color:var(--white); font-size:14px; font-weight:700; }
+  .eprev-logo span { color:var(--gold-light); }
+
+  /* ── ACTIVITY ── */
+  .activity-item { display:flex; gap:11px; padding:11px 0; border-bottom:1px solid var(--mist); }
+  .activity-item:last-child { border-bottom:none; }
+  .activity-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .activity-text { font-size:13px; line-height:1.45; }
+  .activity-text strong { color:var(--text); font-weight:600; }
+  .activity-time { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+  /* ── FAB ── */
+  .fab { position:fixed; right:18px; bottom:calc(var(--tabbar-h) + var(--safe-bottom) + 16px); width:54px; height:54px; border-radius:50%; color:var(--white); font-size:26px; border:none; cursor:pointer; z-index:55; display:flex; align-items:center; justify-content:center; transition:transform 0.15s, background 0.3s, box-shadow 0.3s; background:var(--sky); box-shadow:0 6px 18px rgba(2,119,189,0.4); }
+  .fab:active { transform:scale(0.92); }
+  .fab.urgent-fab { background:var(--pink); box-shadow:0 6px 18px rgba(233,30,140,0.4); }
+
+  /* ── TOAST ── */
+  .toast { position:fixed; bottom:calc(var(--tabbar-h) + var(--safe-bottom) + 14px); left:50%; transform:translateX(-50%) translateY(10px); background:#1a1a2e; color:var(--white); padding:12px 20px; border-radius:12px; font-size:13px; border-left:4px solid var(--gold); z-index:200; opacity:0; transition:all 0.3s; pointer-events:none; max-width:88vw; text-align:center; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .section-header { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin:16px 0 8px; padding-left:4px; }
+
+  /* ── SETTINGS INNER TABS ── */
+  .inner-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:16px; overflow-x:auto; scrollbar-width:none; }
+  .inner-tabs::-webkit-scrollbar { display:none; }
+  .inner-tab { padding:10px 16px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.15s; }
+  .inner-tab.active { color:var(--green-dark); border-bottom-color:var(--green); font-weight:600; }
+  .inner-panel { display:none; }
+  .inner-panel.active { display:block; }
+
+  /* ── STEP LIST ── */
+  .step-list { display:flex; flex-direction:column; gap:0; }
+  .step { display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--mist); }
+  .step:last-child { border-bottom:none; }
+  .step-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--white); flex-shrink:0; margin-top:1px; }
+  .step-content { flex:1; }
+  .step-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px; }
+  .step-desc { font-size:12px; color:var(--text-muted); line-height:1.5; }
+  .step-action { margin-top:8px; }
+
+  /* ── PROVIDER CARD ── */
+  .provider-card { border:1.5px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .provider-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .provider-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .provider-name { font-size:14px; font-weight:600; color:var(--text); }
+  .provider-sub  { font-size:11px; color:var(--text-muted); }
+  .provider-status { margin-left:auto; font-size:11px; font-weight:600; padding:4px 10px; border-radius:12px; flex-shrink:0; }
+  .ps-connected { background:var(--green-pale); color:var(--green-dark); }
+  .ps-pending   { background:#FFF8E1; color:#E65100; border:1px solid #FFE0B2; }
+  .ps-pending   { background:var(--gold-pale);  color:#7A5C00; }
+  .provider-steps { font-size:12px; color:var(--text-muted); line-height:1.7; padding-left:4px; }
+  .provider-steps b { color:var(--text); }
+
+  /* ── SYNC SCHEDULE ── */
+  .sync-status-bar { background:var(--green-pale); border:1px solid #a5d6a7; border-radius:12px; padding:12px 14px; margin-bottom:14px; display:flex; align-items:center; gap:10px; }
+  .sync-dot { width:10px; height:10px; border-radius:50%; background:var(--green); flex-shrink:0; animation:syncPulse 2s infinite; }
+  @keyframes syncPulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
+  .sync-info { flex:1; }
+  .sync-info-title { font-size:13px; font-weight:600; color:var(--green-dark); }
+  .sync-info-sub   { font-size:11px; color:var(--text-muted); }
+  .sync-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--mist); }
+  .sync-row:last-child { border-bottom:none; }
+  .sync-label { font-size:13px; font-weight:500; color:var(--text); }
+  .sync-val   { font-size:13px; color:var(--text-muted); font-weight:500; }
+  .toggle { width:44px; height:26px; background:var(--green); border-radius:13px; position:relative; cursor:pointer; transition:background 0.2s; flex-shrink:0; }
+  .toggle::after { content:''; position:absolute; width:20px; height:20px; background:var(--white); border-radius:50%; top:3px; right:3px; transition:right 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+  .toggle.off { background:var(--border); }
+  .toggle.off::after { right:auto; left:3px; }
+
+  /* ── IMPORT WIZARD ── */
+  .import-source { display:flex; align-items:center; gap:12px; padding:13px; border:1.5px solid var(--border); border-radius:12px; margin-bottom:9px; cursor:pointer; transition:border-color 0.15s; }
+  .import-source:active { background:var(--mist); }
+  .import-source:hover  { border-color:var(--green); }
+  .import-source.selected { border-color:var(--green); background:var(--green-pale); }
+  .import-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .import-info { flex:1; }
+  .import-name { font-size:13px; font-weight:600; color:var(--text); }
+  .import-desc { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .import-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+  .import-source.selected .import-check { background:var(--green); border-color:var(--green); color:var(--white); }
+
+  .import-steps { background:var(--cream); border:1px solid var(--border); border-radius:12px; padding:14px; font-size:13px; line-height:1.7; color:var(--slate); margin-top:12px; }
+  .import-steps-title { font-weight:700; color:var(--text); font-size:13px; margin-bottom:8px; }
+  .import-steps ol { padding-left:18px; }
+  .import-steps li { margin-bottom:6px; }
+  .import-steps code { background:var(--mist); padding:1px 6px; border-radius:4px; font-size:12px; font-family:monospace; color:var(--green-dark); }
+
+  .import-progress { display:none; margin-top:14px; }
+  .import-progress.show { display:block; }
+  .progress-bar-wrap { background:var(--mist); border-radius:10px; height:10px; overflow:hidden; margin:8px 0; }
+  .progress-bar-fill { height:100%; background:var(--green); border-radius:10px; width:0%; transition:width 1.5s ease; }
+  .dedup-preview { background:var(--gold-bright-pale); border:1px solid var(--gold-bright); border-radius:10px; padding:12px 14px; margin-top:12px; font-size:13px; display:none; }
+  .dedup-preview.show { display:block; }
+  .dedup-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
+  .dedup-row:last-child { border-bottom:none; }
+
+  /* ── ACCOUNT PICKER ── */
+  .account-picker { display:flex; gap:8px; margin-top:6px; }
+  .acct-opt { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; border:1.5px solid var(--border); border-radius:12px; cursor:pointer; text-align:center; transition:all 0.15s; }
+  .acct-opt:active { opacity:0.85; }
+  .acct-opt.selected { border-color:var(--green); background:var(--green-pale); }
+  .acct-opt.selected-navy { border-color:var(--navy); background:var(--navy-pale); }
+  .acct-name { font-size:11px; font-weight:700; color:var(--text); }
+  .acct-addr { font-size:9px; color:var(--text-muted); }
+
+  /* ── CALENDAR VIEW TOGGLE ── */
+  .view-toggle { display:grid; grid-template-columns:1fr 1fr; background:var(--mist); border-radius:10px; padding:3px; gap:2px; margin-bottom:12px; }
+  .view-btn { padding:9px; border-radius:8px; border:none; background:none; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; text-align:center; }
+  .view-btn.active { background:var(--white); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.12); font-weight:600; }
+
+  /* ── WEEK VIEW ── */
+  .week-container { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:14px; margin-bottom:12px; background:var(--white); }
+  .week-inner { min-width:520px; }
+  .week-header-row { display:grid; grid-template-columns:38px repeat(7,1fr); border-radius:13px 13px 0 0; overflow:hidden; }
+  .week-day-hdr { background:var(--sky); text-align:center; padding:8px 2px; }
+  .week-day-hdr-label { font-size:9px; font-weight:600; color:rgba(255,255,255,0.65); text-transform:uppercase; letter-spacing:0.04em; }
+  .week-day-hdr-num { font-size:16px; font-weight:700; color:var(--white); margin-top:1px; line-height:1; }
+  .week-day-hdr.w-today .week-day-hdr-num { background:var(--gold); border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; margin:2px auto 0; font-size:13px; }
+  .week-day-hdr.w-today .week-day-hdr-label { color:var(--gold-light); }
+  .week-time-gutter { background:var(--green-dark); }
+  .week-body { display:flex; max-height:380px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .week-time-col { width:38px; flex-shrink:0; }
+  .week-time-label { height:56px; font-size:9px; color:var(--text-muted); text-align:right; padding:4px 5px 0 0; border-top:1px solid var(--mist); }
+  .week-days-grid { flex:1; display:grid; grid-template-columns:repeat(7,1fr); }
+  .week-day-col { position:relative; border-left:1px solid var(--mist); }
+  .week-day-col.w-today { background:#FFFBF2; }
+  .week-hour-cell { height:56px; border-top:1px solid var(--mist); }
+  .week-appt-block { position:absolute; left:2px; right:2px; border-radius:5px; padding:2px 4px; font-size:9px; font-weight:600; color:var(--white); overflow:hidden; cursor:pointer; z-index:2; line-height:1.3; }
+  .week-appt-block:active { opacity:0.75; }
+
+  /* ── BUSINESS HOURS SCHEDULER ── */
+  .biz-hours-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:10px 0 14px; }
+  .hour-slot { padding:9px 4px; border:1.5px solid var(--border); border-radius:8px; font-size:11px; font-weight:500; text-align:center; cursor:pointer; color:var(--text-muted); transition:all 0.15s; user-select:none; }
+  .hour-slot:active { transform:scale(0.95); }
+  .hour-slot.slot-on { background:var(--green); color:var(--white); border-color:var(--green); }
+  .freq-option { display:flex; align-items:center; gap:12px; padding:13px 14px; border:1.5px solid var(--border); border-radius:12px; cursor:pointer; margin-bottom:9px; transition:all 0.15s; }
+  .freq-option.selected { border-color:var(--green); background:var(--green-pale); }
+  .freq-radio { width:18px; height:18px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; transition:all 0.15s; }
+  .freq-option.selected .freq-radio { background:var(--green); border-color:var(--green); }
+  .freq-label { font-size:13px; font-weight:600; color:var(--text); }
+  .freq-desc  { font-size:11px; color:var(--text-muted); margin-top:1px; }
+
+  /* ── VOICE MEMO ── */
+  .vm-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .vm-label {
+    font-size: 11px; font-weight: 700; color: var(--sky);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Idle state */
+  .vm-idle { text-align: center; padding: 6px 0 4px; }
+  .vm-mic-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--sky); color: var(--white);
+    border: none; cursor: pointer; margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(2,119,189,0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .vm-mic-btn:active { transform: scale(0.93); box-shadow: 0 2px 8px rgba(2,119,189,0.3); }
+  .vm-mic-btn svg { width: 32px; height: 32px; }
+  .vm-idle-hint { font-size: 13px; color: var(--text-muted); }
+
+  /* Recording state */
+  .vm-recording-state { display: none; }
+  .vm-recording-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+  }
+  .vm-rec-indicator { display: flex; align-items: center; gap: 7px; }
+  .vm-rec-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--pink); animation: recPulse 1s ease-in-out infinite;
+  }
+  @keyframes recPulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);} }
+  .vm-rec-label { font-size: 13px; font-weight: 700; color: var(--pink); }
+  .vm-timer { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); }
+
+  /* Waveform */
+  .vm-waveform {
+    display: flex; align-items: center; justify-content: center;
+    gap: 3px; height: 48px; margin-bottom: 14px;
+  }
+  .vm-bar {
+    width: 4px; border-radius: 3px; background: var(--sky);
+    animation: vmWave 0.9s ease-in-out infinite;
+  }
+  .vm-bar:nth-child(1)  { animation-delay:0s;    height:12px; }
+  .vm-bar:nth-child(2)  { animation-delay:0.07s; height:22px; }
+  .vm-bar:nth-child(3)  { animation-delay:0.14s; height:36px; }
+  .vm-bar:nth-child(4)  { animation-delay:0.21s; height:28px; }
+  .vm-bar:nth-child(5)  { animation-delay:0.28s; height:44px; }
+  .vm-bar:nth-child(6)  { animation-delay:0.35s; height:20px; }
+  .vm-bar:nth-child(7)  { animation-delay:0.42s; height:38px; }
+  .vm-bar:nth-child(8)  { animation-delay:0.49s; height:16px; }
+  .vm-bar:nth-child(9)  { animation-delay:0.56s; height:42px; }
+  .vm-bar:nth-child(10) { animation-delay:0.63s; height:24px; }
+  .vm-bar:nth-child(11) { animation-delay:0.70s; height:34px; }
+  .vm-bar:nth-child(12) { animation-delay:0.77s; height:18px; }
+  .vm-bar:nth-child(13) { animation-delay:0.84s; height:30px; }
+  .vm-bar:nth-child(14) { animation-delay:0.91s; height:14px; }
+  @keyframes vmWave { 0%,100%{transform:scaleY(0.3);opacity:0.6;} 50%{transform:scaleY(1);opacity:1;} }
+
+  .vm-stop-btn {
+    width: 100%; min-height: 44px; border-radius: 10px;
+    background: var(--pink-pale); color: var(--pink-dark);
+    border: 1.5px solid var(--pink-light); font-size: 14px;
+    font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .vm-stop-btn:active { opacity: 0.8; }
+
+  /* Done / playback state */
+  .vm-done-state { display: none; }
+  .vm-playback-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--mist); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 12px;
+  }
+  .vm-play-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--sky); color: var(--white);
+    border: none; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .vm-play-btn:active { opacity: 0.8; }
+  .vm-memo-info { flex: 1; }
+  .vm-memo-duration { font-size: 13px; font-weight: 600; color: var(--text); }
+  .vm-memo-sub { font-size: 11px; color: var(--text-muted); }
+  .vm-rerecord {
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+
+  /* AI transcript */
+  .vm-transcript {
+    background: var(--sky-pale, #E3F2FD); border: 1px solid #90CAF9;
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .vm-transcript-label {
+    font-size: 10px; font-weight: 700; color: var(--sky-dark);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .vm-transcript-text {
+    font-size: 13px; color: var(--text); line-height: 1.55; min-height: 18px;
+  }
+  .vm-transcript-cursor {
+    display: inline-block; width: 2px; height: 14px;
+    background: var(--sky); vertical-align: middle;
+    animation: blink 0.7s step-end infinite; margin-left: 1px;
+  }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+  .vm-edit-btn {
+    font-size: 12px; color: var(--sky); cursor: pointer;
+    text-decoration: underline; text-underline-offset: 2px;
+    margin-top: 7px; display: inline-block;
+  }
+
+  /* Divider */
+  .vm-divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 12px 0 10px; font-size: 12px; color: var(--text-muted);
+  }
+  .vm-divider::before, .vm-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── INVITE DESIGNER ── */
+  .design-section { margin-bottom: 16px; }
+  .design-label { font-size: 11px; font-weight: 700; color: var(--sky-dark, #015B92); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .design-label-tag { font-size: 10px; font-weight: 600; background: #E3F2FD; color: var(--sky); padding: 2px 7px; border-radius: 10px; }
+
+  /* Upload zone */
+  .flyer-upload-zone {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 22px 14px; text-align: center; cursor: pointer;
+    background: var(--white); transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .flyer-upload-zone:hover, .flyer-upload-zone:active { border-color: var(--sky); background: #E3F2FD; }
+  .flyer-upload-zone.has-image { padding: 0; border-color: var(--sky); border-style: solid; }
+  .flyer-upload-icon { font-size: 30px; margin-bottom: 8px; }
+  .flyer-upload-text { font-size: 13px; color: var(--text-muted); }
+  .flyer-upload-text strong { color: var(--text); }
+  .flyer-preview-img { width: 100%; border-radius: 10px; display: block; max-height: 140px; object-fit: cover; }
+  .flyer-img-controls {
+    display: flex; gap: 6px; padding: 8px;
+    background: rgba(0,0,0,0.45); position: absolute; bottom: 0; left: 0; right: 0;
+    border-radius: 0 0 10px 10px;
+  }
+  .flyer-img-btn {
+    flex: 1; padding: 6px; border-radius: 7px; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 600; font-family: 'Inter', sans-serif;
+    transition: opacity 0.15s;
+  }
+  .flyer-img-btn:active { opacity: 0.75; }
+  .flyer-img-btn.change { background: rgba(255,255,255,0.9); color: var(--text); }
+  .flyer-img-btn.remove { background: rgba(233,30,140,0.85); color: white; }
+
+  /* Layout picker */
+  .layout-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin: 10px 0 14px; }
+  .layout-opt {
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 4px 7px;
+    text-align: center; cursor: pointer; font-size: 10px; font-weight: 600;
+    color: var(--text-muted); transition: all 0.15s; background: var(--white); user-select: none;
+  }
+  .layout-opt:active { transform: scale(0.95); }
+  .layout-opt.active { border-color: var(--sky); background: #E3F2FD; color: var(--sky-dark, #015B92); }
+  .layout-icon { font-size: 18px; margin-bottom: 4px; display: block; }
+
+  /* Branding toggle */
+  .brand-toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-top: 1px solid var(--mist); margin-top: 4px;
+  }
+  .brand-toggle-label { font-size: 12px; font-weight: 500; color: var(--text); }
+  .brand-toggle-sub { font-size: 10px; color: var(--text-muted); }
+
+  /* Live preview container */
+  .invite-preview-wrap { border-radius: 12px; overflow: hidden; }
+
+  /* Layout: header banner */
+  .prev-layout-header .inv-img-block { width: 100%; max-height: 130px; object-fit: cover; display: block; border-radius: 0; }
+  .prev-layout-header .inv-body { padding: 14px; background: var(--white); }
+
+  /* Layout: full flyer */
+  .prev-layout-flyer { position: relative; }
+  .prev-layout-flyer .inv-img-block { width: 100%; display: block; border-radius: 0; }
+  .prev-layout-flyer .inv-flyer-overlay { padding: 14px; background: var(--white); }
+
+  /* Layout: card (side by side) */
+  .prev-layout-card { display: flex; }
+  .prev-layout-card .inv-img-side { width: 110px; flex-shrink: 0; object-fit: cover; min-height: 160px; display: block; }
+  .prev-layout-card .inv-body { flex: 1; padding: 12px; background: var(--white); }
+
+  /* Layout: background */
+  .prev-layout-bg { position: relative; min-height: 200px; }
+  .prev-layout-bg .inv-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .prev-layout-bg .inv-bg-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+  .prev-layout-bg .inv-body { position: relative; z-index: 2; padding: 20px 16px; }
+  .prev-layout-bg .inv-body * { color: var(--white) !important; }
+  .prev-layout-bg .inv-body p { color: rgba(255,255,255,0.85) !important; }
+
+  .inv-brand-bar { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .inv-brand-logo { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 700; color: var(--white); }
+  .inv-brand-logo span { color: var(--gold-light); }
+  .inv-body p { font-size: 13px; line-height: 1.6; color: var(--slate); margin-bottom: 9px; }
+  .inv-cta { text-align: center; margin: 12px 0 4px; }
+  .inv-cta-btn { display: inline-block; padding: 11px 26px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--white); }
+  .inv-footer { font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 10px; }
+
+  @media (min-width:768px) {
+    .content { padding:24px 28px calc(var(--tabbar-h) + var(--safe-bottom) + 24px); max-width:980px; margin:0 auto; width:100%; }
+    .stats-grid { grid-template-columns:repeat(4,1fr); }
+    .ipad-2col { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+    .sheet { border-radius:20px; margin-bottom:8vh; max-height:80vh; }
+    .sheet-backdrop { align-items:center; }
+    .cal-weekdays { background:var(--sky); }
+  }
+  /* ── LOGIN SCREEN ── */
+  .login-screen {
+    position: fixed; inset: 0; z-index: 500;
+    background: linear-gradient(160deg, var(--sky-dark) 0%, var(--sky) 55%, var(--sky-light) 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; padding-top: calc(var(--safe-top) + 24px); padding-bottom: calc(var(--safe-bottom) + 24px);
+  }
+  .login-card {
+    background: var(--white); border-radius: 20px; padding: 30px 26px;
+    width: 100%; max-width: 380px; box-shadow: 0 24px 70px rgba(0,0,0,0.35);
+  }
+  .login-logo {
+    width: 62px; height: 62px; border-radius: 16px; background: var(--sky);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+    font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: white;
+    border-bottom: 4px solid var(--sky-accent);
+  }
+  .login-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--navy-dark); text-align: center; }
+  .login-sub   { font-size: 12px; color: var(--text-muted); text-align: center; margin: 4px 0 20px; }
+  .login-error {
+    display: none; background: var(--pink-pale); border: 1px solid var(--pink-light);
+    color: var(--pink-dark); border-radius: 10px; padding: 10px 12px;
+    font-size: 12.5px; line-height: 1.5; margin-bottom: 12px;
+  }
+  .login-error.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN (covers app until signed in) -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">H</div>
+    <div class="login-title">Haven CRM</div>
+    <div class="login-sub">Haven Property Services · Sign in to continue</div>
+    <div class="login-error" id="loginError"></div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="loginEmail" type="email" autocomplete="username" placeholder="robin@enjoyyourhaven.com" onkeydown="if(event.key==='Enter')handleLogin()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password" onkeydown="if(event.key==='Enter')handleLogin()">
+    </div>
+    <button class="btn btn-sky btn-block" id="loginBtn" style="background:var(--sky);color:white;margin-top:6px;" onclick="handleLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar" id="topbar">
+  <div class="topbar-logo">Haven <span>CRM</span></div>
+  <div class="topbar-right">
+    <div class="mode-toggle">
+      <button class="mode-btn active-work" onclick="setMode('work',this)">Work</button>
+      <button class="mode-btn" onclick="setMode('all',this)">All</button>
+      <button class="mode-btn" onclick="setMode('personal',this)">Personal</button>
+    </div>
+    <div class="topbar-avatar" onclick="openSheet('settings')" title="Setup & Settings">RF</div>
+  </div>
+</div>
+
+<!-- TAGLINE -->
+<div class="tagline-bar">Be A Part of the Good God's Doing</div>
+
+<div class="content" id="content">
+
+<!-- ════ HOME ════ -->
+<div class="screen active" id="screen-home">
+  <div class="mode-banner work-banner" id="homeBannerWork">🟢 Work mode — business contacts, events & tasks</div>
+  <div class="mode-banner personal-banner" id="homeBannerPersonal">🔵 Personal mode — your private life, separate from work</div>
+
+  <div class="screen-title" id="homeGreeting">Welcome, Robin</div>
+  <div class="screen-sub">Haven Property Services · CRM ready to use</div>
+
+  <!-- Color Legend -->
+  <div class="color-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Networking</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Work</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--navy)"></div>Personal</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Urgent</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--gold-bright)"></div>New (30 days)</div>
+  </div>
+
+  <div class="stats-grid" id="homeStats"></div>
+  <div class="quick-actions" id="homeActions"></div>
+
+  <div class="ipad-2col">
+    <div>
+      <!-- Urgent Tasks -->
+      <div class="card" id="urgentCard">
+        <div class="card-title" style="color:var(--pink-dark);">🔴 Urgent Tasks
+          <button class="btn btn-pink btn-sm" onclick="openSheet('addTask')">+ Add</button>
+        </div>
+        <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">
+          No urgent tasks — you're all caught up! 🎉<br>
+          <span style="color:var(--pink);cursor:pointer;font-weight:500;" onclick="openSheet('addTask')">+ Add a task</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Today's Schedule <span style="font-weight:400;color:var(--text-muted);font-size:11px;cursor:pointer;" onclick="switchTab('calendar')">View calendar →</span></div>
+        <div id="todaySchedule">
+          <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet('newAppt')">+ Add one</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Recent Activity</div>
+        <div style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;line-height:1.6;">
+          No activity yet.<br>Start by scanning a card or adding a contact.
+        </div>
+      <div class="activity-item">
+        <div class="activity-icon" style="background:var(--pink-pale);">🔴</div>
+        <div><div class="activity-text">Urgent flag added — <strong>Elm St lease renewal</strong></div><div class="activity-time">Jun 9 · <span style="color:var(--pink);font-weight:600;">Urgent</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CONTACTS ════ -->
+<div class="screen" id="screen-contacts">
+  <div class="screen-title">Contacts</div>
+  <div class="screen-sub" id="contactsSub">0 contacts · add your first below</div>
+
+  <div class="pills-scroll" id="contactPills">
+    <div class="pill active" onclick="filterContacts('all',this,'active')">All</div>
+    <div class="pill" style="border-color:var(--gold);" onclick="filterContacts('networking',this,'active-gold')">🤝 Networking</div>
+    <div class="pill" style="border-color:var(--green);" onclick="filterContacts('work',this,'active-work')">🟢 Work</div>
+    <div class="pill" style="border-color:var(--navy);" onclick="filterContacts('personal',this,'active-navy')">🔵 Personal</div>
+    <div class="pill" style="border-color:var(--pink);" onclick="filterContacts('urgent',this,'active-pink')">🔴 Urgent</div>
+    <div class="pill" style="border-color:var(--gold-bright);" onclick="filterContacts('new',this,'active-yellow')">⭐ New (30 days)</div>
+  </div>
+
+  <div id="contactsList">
+    <div id="contacts-empty-state" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+      <div style="font-size:48px;margin-bottom:14px;">👥</div>
+      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">No contacts yet</div>
+      <div style="font-size:13px;line-height:1.6;margin-bottom:20px;">Scan a business card to add someone you meet,<br>or tap + Add Contact to get started.</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-yellow btn-sm" style="color:var(--text);" onclick="switchTab('scan')">📷 Scan Card</button>
+        <button class="btn btn-sky btn-sm" style="background:var(--sky);color:white;" onclick="openSheet('addContact')">+ Add Contact</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SCAN ════ -->
+<div class="screen" id="screen-scan">
+  <div class="screen-title">Scan Business Card</div>
+  <div class="screen-sub">Auto-tagged ⭐ yellow for 30 days · record a voice memo on the spot</div>
+  <div class="card-drop-zone" id="dropZone" onclick="simulateScan()">
+    <div class="drop-icon">🪪</div>
+    <div class="drop-text"><strong>Tap to take a photo</strong><br>or choose from your library</div>
+  </div>
+  <div class="scan-progress" id="scanProgress"><div class="spinner"></div> AI is reading the card…</div>
+  <div class="scan-result" id="scanResult"><div class="scan-result-label">⭐ AI Extracted — new contact (30-day yellow tag auto-applied)</div><div id="scanResultContent"></div></div>
+  <div id="scanFormShell"></div>
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">✏️ Or enter manually</div>
+    <div class="form-2col">
+      <div class="form-group"><label class="form-label">First Name</label><input class="form-input" placeholder="First"></div>
+      <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" placeholder="Last"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Company</label><input class="form-input" placeholder="Company (optional)"></div>
+    <div class="form-2col">
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" placeholder="email@…"></div>
+      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" placeholder="(214)…"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color Category</label>
+      <select class="form-select">
+        <option>🤝 Gold — Networking</option>
+        <option>🟢 Green — Work / Business</option>
+        <option>🔵 Navy — Personal</option>
+      </select>
+    </div>
+    <div style="background:var(--gold-bright-pale);border:1px solid var(--gold-bright);border-radius:10px;padding:10px 12px;font-size:12px;color:#7A5C00;margin-bottom:13px;">
+      ⭐ This contact will automatically show as <strong>yellow (New)</strong> for 30 days, then shift to your selected category color.
+    </div>
+    <div id="vm-manual-container"></div>
+    <button class="btn btn-green btn-block" onclick="showToast('⭐ Contact saved — yellow for 30 days')">Save Contact</button>
+  </div>
+</div>
+
+<!-- ════ CALENDAR ════ -->
+<div class="screen" id="screen-calendar">
+  <div class="screen-title">Calendar</div>
+  <div class="screen-sub">Color-coded by category</div>
+
+  <!-- View toggle: Month | Week -->
+  <div class="view-toggle" style="margin-bottom:10px;">
+    <button class="view-btn active" onclick="setCalView('month',this)">📅 Month</button>
+    <button class="view-btn" onclick="setCalView('week',this)">📆 Week</button>
+  </div>
+
+  <!-- Category filter -->
+  <div class="seg-control" style="margin-bottom:12px;">
+    <button class="seg-btn active" onclick="calFilter('all',this)">All</button>
+    <button class="seg-btn" onclick="calFilter('work',this)">🟢 Work</button>
+    <button class="seg-btn" onclick="calFilter('networking',this)">🤝 Net</button>
+    <button class="seg-btn" onclick="calFilter('personal',this)">🔵 Personal</button>
+  </div>
+
+  <!-- Nav header (used by both views) -->
+  <div class="cal-header" id="calNavHeader">
+    <button class="cal-nav-btn" onclick="navCal(-1)">‹</button>
+    <div class="cal-month" id="calNavLabel">June 2026</div>
+    <button class="cal-nav-btn" onclick="navCal(1)">›</button>
+  </div>
+
+  <!-- MONTH VIEW -->
+  <div id="monthViewContainer">
+    <div class="cal-grid">
+      <div class="cal-weekdays" id="calWeekdays">
+        <div class="cal-weekday">S</div><div class="cal-weekday">M</div><div class="cal-weekday">T</div>
+        <div class="cal-weekday">W</div><div class="cal-weekday">T</div><div class="cal-weekday">F</div><div class="cal-weekday">S</div>
+      </div>
+      <div class="cal-days" id="calDays"></div>
+    </div>
+  </div>
+
+  <!-- WEEK VIEW -->
+  <div id="weekViewContainer" style="display:none;">
+    <div class="week-container">
+      <div class="week-inner" id="weekInner"></div>
+    </div>
+  </div>
+
+  <div class="cal-legend">
+    <span><span class="day-dot dot-gold"></span> Networking</span>
+    <span><span class="day-dot dot-green"></span> Work</span>
+    <span><span class="day-dot dot-navy"></span> Personal</span>
+    <span><span class="day-dot dot-pink"></span> Urgent</span>
+    <span><span class="day-dot dot-yellow"></span> New</span>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div style="font-size:14px;font-weight:600;color:var(--text);" id="agendaHeader">Friday, June 12</div>
+    <button class="btn btn-outline btn-sm" onclick="openSheet('newAppt')">+ Add</button>
+  </div>
+  <div id="agendaList"></div>
+</div>
+
+<!-- ════ INBOX ════ -->
+<div class="screen" id="screen-inbox">
+  <div class="screen-title">Inbox</div>
+  <div class="screen-sub">5 accounts listed · log emails manually below</div>
+  <div class="sync-status-bar">
+    <div class="sync-dot"></div>
+    <div class="sync-info">
+      <div class="sync-info-title">Email sync requires a server — not available yet</div>
+      <div class="sync-info-sub">Use <strong>Settings → Import Contacts</strong> to load contacts from a file</div>
+    </div>
+  </div>
+  <div class="pills-scroll">
+    <div class="pill active">All</div>
+    <div class="pill" style="border-color:#E8F5E9;">🏠 Haven</div>
+    <div class="pill" style="border-color:#E3F2FD;">🌰 Acorn</div>
+    <div class="pill" style="border-color:#EDE7F6;">HP Dallas</div>
+    <div class="pill" style="border-color:#FFF8E1;">Scoutre</div>
+    <div class="pill" style="border-color:#FBE9E7;">Frazier</div>
+    <div class="pill" style="border-color:var(--pink);">🔴 Urgent</div>
+  </div>
+  <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+    <div style="font-size:48px;margin-bottom:14px;">📭</div>
+    <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">Inbox is empty</div>
+    <div style="font-size:13px;line-height:1.6;">Your emails from all 5 accounts will appear here<br>after the first sync. Next sync runs at 6:00 AM.</div>
+    <div style="margin-top:14px;"><button class="btn btn-outline btn-sm" onclick="innerTab('import',document.querySelector('.inner-tab:nth-child(2)'));openSheet('settings')">Import Contacts from file →</button></div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">Connected Accounts
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);">5 accounts</span>
+    </div>
+    <!-- Haven -->
+    <div class="email-account">
+      <div class="email-account-icon" style="background:#E3F2FD;font-size:15px;font-weight:700;color:var(--sky);">🏠</div>
+      <div class="email-account-info">
+        <div class="email-account-name">robin@enjoyyourhaven.com</div>
+        <div class="email-account-addr">Haven Property Services · <span style="color:var(--gold);font-weight:600;">📨 Invite sending ON</span></div>
+      </div>
+      <div class="status-connected">✓</div>
+    </div>
+    <!-- Acorn -->
+    <div class="email-account">
+      <div class="email-account-icon" style="background:#E8F5E9;font-size:15px;font-weight:700;color:var(--green);">🌰</div>
+      <div class="email-account-info">
+        <div class="email-account-name">robin@enjoyyouracorn.com</div>
+        <div class="email-account-addr">Acorn · Inbox sync only</div>
+      </div>
+      <div class="status-connected">✓</div>
+    </div>
+    <!-- HP Dallas -->
+    <div class="email-account">
+      <div class="email-account-icon" style="background:#EDE7F6;font-size:13px;font-weight:700;color:#5C6BC0;">HP</div>
+      <div class="email-account-info">
+        <div class="email-account-name">robin@hpdallas.com</div>
+        <div class="email-account-addr">HP Dallas · <span style="color:var(--gold);font-weight:600;">📨 Invite sending ON</span></div>
+      </div>
+      <div class="status-connected">✓</div>
+    </div>
+    <!-- Scoutre -->
+    <div class="email-account">
+      <div class="email-account-icon" style="background:#FFF8E1;font-size:15px;font-weight:700;color:#F57F17;">S</div>
+      <div class="email-account-info">
+        <div class="email-account-name">robin@scoutre.net</div>
+        <div class="email-account-addr">Scoutre · <span style="color:var(--gold);font-weight:600;">📨 Invite sending ON</span></div>
+      </div>
+      <div class="status-connected">✓</div>
+    </div>
+    <!-- Frazier Renovations -->
+    <div class="email-account">
+      <div class="email-account-icon" style="background:#FBE9E7;font-size:15px;font-weight:700;color:#BF360C;">F</div>
+      <div class="email-account-info">
+        <div class="email-account-name">maintenance@frazier-renovations.com</div>
+        <div class="email-account-addr">Frazier Renovations · Inbox sync only</div>
+      </div>
+      <div class="status-connected">✓</div>
+    </div>
+    <button class="btn btn-outline btn-block btn-sm" style="margin-top:8px;" onclick="showToast('Account settings — tap RF avatar → Email Setup')">Manage Accounts</button>
+  </div>
+</div>
+
+<!-- ════ EVENTS ════ -->
+<div class="screen" id="screen-events">
+  <div class="screen-title">Events</div>
+  <div class="screen-sub">Color-coded by type</div>
+
+  <div class="seg-control" id="eventsSeg">
+    <button class="seg-btn active" onclick="filterEvents('all',this)">All</button>
+    <button class="seg-btn" onclick="filterEvents('networking',this)">🤝 Networking</button>
+    <button class="seg-btn" onclick="filterEvents('work',this)">🟢 Work</button>
+    <button class="seg-btn" onclick="filterEvents('personal',this)">🔵 Personal</button>
+  </div>
+
+  <div class="evt-networking">
+    <div class="section-header" style="color:#7A5C00;">🤝 Networking Events</div>
+    <div style="text-align:center;padding:28px 14px;background:var(--white);border:1px solid var(--border);border-radius:14px;color:var(--text-muted);font-size:13px;">
+      No networking events yet.<br>
+      <span style="color:var(--gold);cursor:pointer;font-weight:500;" onclick="openSheet('newEvent')">+ Create your first event</span>
+    </div>
+  </div>
+
+  <div class="evt-work">
+    <div class="section-header" style="color:var(--green-dark);">🟢 Work Events</div>
+    <div style="text-align:center;padding:28px 14px;background:var(--white);border:1px solid var(--border);border-radius:14px;color:var(--text-muted);font-size:13px;">
+      No work events yet.<br>
+      <span style="color:var(--green);cursor:pointer;font-weight:500;" onclick="openSheet('newEvent')">+ Create a work event</span>
+    </div>
+  </div>
+
+  <div class="evt-personal">
+    <div class="section-header" style="color:var(--navy-dark);">🔵 Personal Events</div>
+    <div style="text-align:center;padding:28px 14px;background:var(--white);border:1px solid var(--border);border-radius:14px;color:var(--text-muted);font-size:13px;">
+      No personal events yet.<br>
+      <span style="color:var(--navy);cursor:pointer;font-weight:500;" onclick="openSheet('newPersonalEvent')">+ Create a personal event</span>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+    <button class="btn btn-gold" onclick="openSheet('newEvent')">🤝 Networking</button>
+    <button class="btn btn-green" onclick="openSheet('newEvent')">🟢 Work Event</button>
+    <button class="btn btn-navy" onclick="openSheet('newPersonalEvent')" style="grid-column:1/-1;">🔵 Personal Event</button>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="handleFab()">+</button>
+
+<!-- TAB BAR -->
+<nav class="tabbar" id="tabbar">
+  <div class="tab active" data-tab="home" onclick="switchTab('home',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+  </div>
+  <div class="tab" data-tab="contacts" onclick="switchTab('contacts',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Contacts
+  </div>
+  <div class="tab" data-tab="scan" onclick="switchTab('scan',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan
+  </div>
+  <div class="tab" data-tab="calendar" onclick="switchTab('calendar',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendar
+  </div>
+  <div class="tab" data-tab="inbox" onclick="switchTab('inbox',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Inbox
+  </div>
+  <div class="tab" data-tab="events" onclick="switchTab('events',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></svg>Events
+  </div>
+</nav>
+
+<!-- ════ SHEETS ════ -->
+
+<!-- BUSINESS INVITE -->
+<div class="sheet-backdrop" id="sheet-invite">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title">🤝 Send Networking Invites</div><button class="sheet-close" onclick="closeSheet('invite')">✕</button></div>
+    <div class="sheet-body">
+
+      <!-- Recipients -->
+      <div class="form-group">
+        <label class="form-label">Recipients</label>
+        <div class="invite-recipients" style="min-height:52px;">
+          <span style="color:var(--text-muted);font-size:12px;align-self:center;">No recipients yet — add from your contacts below</span>
+        </div>
+        <div class="pills-scroll" style="margin-bottom:0;">
+          <div class="pill" style="border-color:var(--gold);" onclick="showToast('All Networking contacts added')">+ All Networking</div>
+          <div class="pill" style="border-color:var(--gold-bright);" onclick="showToast('New contacts added')">+ New (30-day)</div>
+          <div class="pill">+ Pick</div>
+        </div>
+      </div>
+
+      <!-- Send From -->
+      <div class="form-group">
+        <label class="form-label">Send From Account</label>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Only your invite-enabled accounts are shown</div>
+        <div class="account-picker">
+          <div class="acct-opt selected" onclick="pickAcct(this)">
+            <span style="font-size:20px;">🏠</span>
+            <div class="acct-name">Haven</div>
+            <div class="acct-addr">robin@enjoyyourhaven.com</div>
+          </div>
+          <div class="acct-opt" onclick="pickAcct(this)">
+            <span style="font-size:20px;font-weight:700;color:#5C6BC0;">HP</span>
+            <div class="acct-name">HP Dallas</div>
+            <div class="acct-addr">robin@hpdallas.com</div>
+          </div>
+          <div class="acct-opt" onclick="pickAcct(this)">
+            <span style="font-size:20px;font-weight:700;color:#F57F17;">S</span>
+            <div class="acct-name">Scoutre</div>
+            <div class="acct-addr">robin@scoutre.net</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Replies go to the selected account's inbox</div>
+      </div>
+
+      <!-- ── INVITE DESIGNER ── -->
+      <div class="design-section">
+        <div class="design-label">
+          🎨 Invite Design
+          <span class="design-label-tag" id="inv-design-mode">Haven template</span>
+        </div>
+
+        <!-- Flyer upload -->
+        <div class="flyer-upload-zone" id="inv-upload-zone" onclick="triggerFlyerUpload('inv')">
+          <div class="flyer-upload-icon">🖼️</div>
+          <div class="flyer-upload-text"><strong>Upload your flyer or image</strong><br>JPG, PNG, or PDF · tap to choose</div>
+        </div>
+        <input type="file" id="inv-file-input" accept="image/*,application/pdf" style="display:none;" onchange="handleFlyerUpload('inv',this)">
+
+        <!-- Layout picker (shown after upload) -->
+        <div id="inv-layout-section" style="display:none;">
+          <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin:10px 0 0;text-transform:uppercase;letter-spacing:0.05em;">How to use your image</div>
+          <div class="layout-grid">
+            <div class="layout-opt active" id="inv-layout-header" onclick="setInvLayout('inv','header',this)">
+              <span class="layout-icon">🔝</span>Header Banner
+            </div>
+            <div class="layout-opt" id="inv-layout-flyer" onclick="setInvLayout('inv','flyer',this)">
+              <span class="layout-icon">🖼️</span>Full Flyer
+            </div>
+            <div class="layout-opt" id="inv-layout-card" onclick="setInvLayout('inv','card',this)">
+              <span class="layout-icon">◧</span>Card Side
+            </div>
+            <div class="layout-opt" id="inv-layout-bg" onclick="setInvLayout('inv','bg',this)">
+              <span class="layout-icon">🌅</span>Background
+            </div>
+          </div>
+
+          <!-- Branding toggle -->
+          <div class="brand-toggle-row">
+            <div>
+              <div class="brand-toggle-label">Show Haven branding</div>
+              <div class="brand-toggle-sub">Header bar with Haven logo</div>
+            </div>
+            <div class="toggle" id="inv-brand-toggle" onclick="this.classList.toggle('off');updateInvitePreview('inv')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live preview -->
+      <div class="form-label" style="margin-bottom:8px;">Preview</div>
+      <div class="email-preview" style="padding:0;overflow:hidden;">
+        <div class="invite-preview-wrap" id="inv-preview-wrap">
+          <!-- Default Haven template -->
+          <div class="inv-brand-bar" style="background:var(--sky);">
+            <div class="inv-brand-logo">Haven <span>Property Services</span></div>
+          </div>
+          <div class="inv-body" style="padding:14px;background:var(--white);">
+            <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:9px;">Hi <strong>[First Name]</strong>,</p>
+            <p>You're invited to <strong>[Event Name]</strong> — add event details above.</p>
+            <p>📅 <strong>[Date · Time]</strong><br>📍 [Venue · Address]</p>
+            <div class="inv-cta"><div class="inv-cta-btn" style="background:var(--gold);">RSVP Now</div></div>
+            <div class="inv-footer">Haven Property Services · enjoyyourhaven.com · 469-960-3220</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="closeSheet('invite');showToast('🤝 Invites sent via robin@enjoyyourhaven.com')">Send Invites</button>
+    </div>
+  </div>
+</div>
+
+<!-- PERSONAL INVITE -->
+<div class="sheet-backdrop" id="sheet-personalInvite">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title">🔵 Personal Invites</div><button class="sheet-close" onclick="closeSheet('personalInvite')">✕</button></div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label class="form-label">Invite</label>
+        <div class="invite-recipients" style="min-height:52px;">
+          <span style="color:var(--text-muted);font-size:12px;align-self:center;">No recipients yet — add from your contacts</span>
+        </div>
+        <div class="pills-scroll" style="margin-bottom:0;">
+          <div class="pill" style="border-color:var(--navy);" onclick="showToast('All Personal contacts added')">+ All Personal</div>
+          <div class="pill">+ Pick</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Send Via</label>
+        <div class="account-picker">
+          <div class="acct-opt selected-navy selected" onclick="pickAcctNavy(this)">
+            <span style="font-size:22px;">🍎</span>
+            <div class="acct-name">iCloud</div>
+            <div class="acct-addr">Personal</div>
+          </div>
+          <div class="acct-opt" onclick="pickAcctNavy(this)">
+            <span style="font-size:22px;">🏠</span>
+            <div class="acct-name">Haven</div>
+            <div class="acct-addr">robin@enjoyyourhaven.com</div>
+          </div>
+          <div class="acct-opt" onclick="pickAcctNavy(this)">
+            <span style="font-size:22px;">💬</span>
+            <div class="acct-name">Text</div>
+            <div class="acct-addr">Messages app</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PERSONAL INVITE DESIGNER ── -->
+      <div class="design-section">
+        <div class="design-label">
+          🎨 Invite Design
+          <span class="design-label-tag" id="pinv-design-mode">Default style</span>
+        </div>
+        <div class="flyer-upload-zone" id="pinv-upload-zone" onclick="triggerFlyerUpload('pinv')">
+          <div class="flyer-upload-icon">🖼️</div>
+          <div class="flyer-upload-text"><strong>Upload a photo or flyer</strong><br>Your image, your vibe</div>
+        </div>
+        <input type="file" id="pinv-file-input" accept="image/*" style="display:none;" onchange="handleFlyerUpload('pinv',this)">
+
+        <div id="pinv-layout-section" style="display:none;">
+          <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin:10px 0 0;text-transform:uppercase;letter-spacing:0.05em;">Layout</div>
+          <div class="layout-grid">
+            <div class="layout-opt active" id="pinv-layout-header" onclick="setInvLayout('pinv','header',this)">
+              <span class="layout-icon">🔝</span>Header
+            </div>
+            <div class="layout-opt" id="pinv-layout-flyer" onclick="setInvLayout('pinv','flyer',this)">
+              <span class="layout-icon">🖼️</span>Full Photo
+            </div>
+            <div class="layout-opt" id="pinv-layout-card" onclick="setInvLayout('pinv','card',this)">
+              <span class="layout-icon">◧</span>Side
+            </div>
+            <div class="layout-opt" id="pinv-layout-bg" onclick="setInvLayout('pinv','bg',this)">
+              <span class="layout-icon">🌅</span>Background
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-label" style="margin-bottom:8px;">Preview</div>
+      <div class="email-preview" style="padding:0;overflow:hidden;">
+        <div class="invite-preview-wrap" id="pinv-preview-wrap">
+          <div class="inv-brand-bar" style="background:var(--navy-dark);">
+            <div class="inv-brand-logo">Robin <span style="color:#90CAF9;">Frazier</span></div>
+          </div>
+          <div class="inv-body" style="padding:14px;background:var(--white);">
+            <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:9px;">Hey <strong>[First Name]</strong>! 🎉</p>
+            <p>You're invited to <strong>[Event Name]</strong> — add details above.</p>
+            <p>📅 <strong>[Date · Time]</strong><br>📍 [Location]</p>
+            <div class="inv-cta"><div class="inv-cta-btn" style="background:var(--navy);">Let me know!</div></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-navy btn-block" style="margin-top:14px;" onclick="closeSheet('personalInvite');showToast('🔵 Personal invites sent!')">Send Invites</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW EVENT -->
+<div class="sheet-backdrop" id="sheet-newEvent">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title">Create Event</div><button class="sheet-close" onclick="closeSheet('newEvent')">✕</button></div>
+    <div class="sheet-body">
+      <div class="form-group"><label class="form-label">Event Name</label><input class="form-input" placeholder="e.g. DFW Real Estate Networking Night"></div>
+      <div class="form-group"><label class="form-label">Color / Type</label>
+        <select class="form-select"><option>🤝 Gold — Networking</option><option>🟢 Green — Work / Business</option><option>🔴 Pink — Urgent</option></select>
+      </div>
+      <div class="form-2col">
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date"></div>
+        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Location</label><input class="form-input" placeholder="Venue & address"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" placeholder="Appears in invite email"></textarea></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="closeSheet('newEvent');showToast('Draft saved')">Save Draft</button>
+        <button class="btn btn-gold" style="flex:1;" onclick="closeSheet('newEvent');openSheet('invite')">Send Invites →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PERSONAL EVENT -->
+<div class="sheet-backdrop" id="sheet-newPersonalEvent">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title">🔵 Personal Event</div><button class="sheet-close" onclick="closeSheet('newPersonalEvent')">✕</button></div>
+    <div class="sheet-body">
+      <div class="form-group"><label class="form-label">Event Name</label><input class="form-input" placeholder="e.g. Birthday Dinner, Cookout"></div>
+      <div class="form-2col">
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date"></div>
+        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Location</label><input class="form-input" placeholder="Address or venue"></div>
+      <div class="form-group"><label class="form-label">Category</label>
+        <select class="form-select"><option>Family</option><option>Friends</option><option>Birthday / Anniversary</option><option>Holiday</option><option>Other Personal</option></select>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="closeSheet('newPersonalEvent');showToast('🔵 Personal event saved')">Save</button>
+        <button class="btn btn-navy" style="flex:1;" onclick="closeSheet('newPersonalEvent');openSheet('personalInvite')">Send Invites →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD APPOINTMENT -->
+<div class="sheet-backdrop" id="sheet-newAppt">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title">Add Appointment</div><button class="sheet-close" onclick="closeSheet('newAppt')">✕</button></div>
+    <div class="sheet-body">
+      <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="apptTitle" placeholder="e.g. Property showing — Oak Lawn"></div>
+      <div class="form-2col">
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="apptDate"></div>
+        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="apptTime"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Color Category</label>
+        <select class="form-select" id="apptCat">
+          <option value="networking">🤝 Gold — Networking</option>
+          <option value="work">🟢 Green — Work</option>
+          <option value="personal">🔵 Navy — Personal</option>
+          <option value="urgent">🔴 Pink — Urgent</option>
+          <option value="new">⭐ Yellow — New Contact</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Notes (optional)</label>
+        <input class="form-input" id="apptNotes" placeholder="e.g. Bring lease documents">
+      </div>
+      <div class="form-group"><label class="form-label">Send Calendar Invite to Contact?</label>
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--mist);border-radius:10px;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('inviteFromRow').style.display=document.getElementById('inviteFromRow').style.display==='none'?'block':'none'">
+          <input type="checkbox" id="sendInviteChk" style="width:20px;height:20px;accent-color:var(--sky);">
+          <label for="sendInviteChk" style="font-size:13px;font-weight:500;cursor:pointer;">Send a calendar invite email</label>
+        </div>
+        <div id="inviteFromRow" style="display:none;">
+          <label class="form-label">Send From</label>
+          <div class="account-picker">
+            <div class="acct-opt selected" onclick="pickAcct(this)"><span style="font-size:18px;">🏠</span><div class="acct-name">Haven</div><div class="acct-addr">robin@enjoyyourhaven.com</div></div>
+            <div class="acct-opt" onclick="pickAcct(this)"><span style="font-size:16px;font-weight:700;color:#5C6BC0;">HP</span><div class="acct-name">HP Dallas</div><div class="acct-addr">robin@hpdallas.com</div></div>
+            <div class="acct-opt" onclick="pickAcct(this)"><span style="font-size:16px;font-weight:700;color:#F57F17;">S</span><div class="acct-name">Scoutre</div><div class="acct-addr">robin@scoutre.net</div></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-green btn-block" onclick="saveAppointment()">✓ Add to Calendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TASK -->
+<div class="sheet-backdrop" id="sheet-addTask">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title">Add Task</div><button class="sheet-close" onclick="closeSheet('addTask')">✕</button></div>
+    <div class="sheet-body">
+      <div class="form-group"><label class="form-label">Task</label><input class="form-input" id="taskTitle" placeholder="e.g. Follow up with client re: lease renewal"></div>
+      <div class="form-group"><label class="form-label">Priority</label>
+        <select class="form-select" id="taskPriority">
+          <option value="urgent">🔴 Urgent</option>
+          <option value="work">🟢 Work</option>
+          <option value="networking">🤝 Networking</option>
+          <option value="personal">🔵 Personal</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" type="date" id="taskDue"></div>
+      <button class="btn btn-pink btn-block" onclick="saveTask()">Add Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CONTACT -->
+<div class="sheet-backdrop" id="sheet-addContact">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title">Add Contact</div><button class="sheet-close" onclick="closeSheet('addContact')">✕</button></div>
+    <div class="sheet-body">
+      <div class="form-2col">
+        <div class="form-group"><label class="form-label">First Name</label><input class="form-input" id="cFirstName" placeholder="First"></div>
+        <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" id="cLastName" placeholder="Last"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Company</label><input class="form-input" id="cCompany" placeholder="Company (optional)"></div>
+      <div class="form-2col">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="cEmail" placeholder="email@…"></div>
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="cPhone" placeholder="(214) 555-…"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Color Category</label>
+        <select class="form-select" id="cCat">
+          <option value="networking">🤝 Gold — Networking</option>
+          <option value="work">🟢 Green — Work</option>
+          <option value="personal">🔵 Navy — Personal</option>
+          <option value="new">⭐ Yellow — New (auto 30 days)</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="cNotes" placeholder="Where you met, context…"></textarea></div>
+      <button class="btn btn-sky btn-block" style="background:var(--sky);color:white;" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT DETAIL — populated dynamically when a contact is tapped -->
+<div class="sheet-backdrop" id="sheet-contactDetail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><div class="sheet-title" id="contactDetailName">Contact</div><button class="sheet-close" onclick="closeSheet('contactDetail')">✕</button></div>
+    <div class="sheet-body">
+      <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;">
+        Tap a contact to view their details here.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SETTINGS SHEET ════ -->
+<div class="sheet-backdrop" id="sheet-settings">
+  <div class="sheet" style="max-height:92vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">⚙️ Setup & Settings</div>
+      <button class="sheet-close" onclick="closeSheet('settings')">✕</button>
+    </div>
+    <div class="sheet-body" style="padding-top:0;">
+
+      <!-- Signed-in account -->
+      <div style="display:flex;align-items:center;gap:12px;background:var(--mist);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+        <div class="topbar-avatar" style="flex-shrink:0;">RF</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Signed in</div>
+          <div id="accountEmail" style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
+        </div>
+        <button class="btn btn-outline btn-sm" style="color:var(--pink-dark);border-color:var(--pink-light);flex-shrink:0;" onclick="handleLogout()">Sign Out</button>
+      </div>
+
+      <!-- Inner tabs -->
+      <div class="inner-tabs">
+        <div class="inner-tab active" onclick="innerTab('email',this)">📧 Email Setup</div>
+        <div class="inner-tab" onclick="innerTab('import',this)">📥 Import Contacts</div>
+        <div class="inner-tab" onclick="innerTab('sync',this)">⏰ Sync Schedule</div>
+      </div>
+
+      <!-- ── TAB: EMAIL SETUP ── -->
+      <div class="inner-panel active" id="ipanel-email">
+
+        <div style="background:var(--pink-pale);border:1px solid var(--pink-light);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--pink-dark);margin-bottom:14px;line-height:1.6;">
+          <strong>⚠️ Important — email sync requires a backend server</strong><br>
+          Browsers can't connect directly to Gmail, Outlook, or iCloud APIs. Real email sync needs a server-side app with OAuth credentials. These connection buttons show how it <em>will</em> work once the app is hosted. For now, use the <strong>Import Contacts</strong> tab to load your contacts from file.
+        </div>
+
+        <!-- Haven -->
+        <div class="provider-card">
+          <div class="provider-header">
+            <div class="provider-icon" style="background:#E3F2FD;font-size:18px;font-weight:700;color:var(--sky);">🏠</div>
+            <div><div class="provider-name">robin@enjoyyourhaven.com</div><div class="provider-sub">Haven Property Services · <span style="color:var(--gold);font-weight:600;">📨 Invites ON</span></div></div>
+            <div class="provider-status" style="background:#FFF8E1;color:#E65100;border:1px solid #FFE0B2;">⚙️ Needs server</div>
+          </div>
+          <div class="provider-steps">Primary business address for client-facing communication and event invites. Connect via <b>Google Workspace OAuth</b> or your hosting provider's IMAP settings.</div>
+          <button class="btn btn-outline btn-sm btn-block" style="margin-top:10px;" onclick="showEmailHelp('haven')">Manage Connection</button>
+        </div>
+
+        <!-- Acorn -->
+        <div class="provider-card">
+          <div class="provider-header">
+            <div class="provider-icon" style="background:#E8F5E9;font-size:18px;">🌰</div>
+            <div><div class="provider-name">robin@enjoyyouracorn.com</div><div class="provider-sub">Acorn · Inbox sync only</div></div>
+            <div class="provider-status" style="background:#FFF8E1;color:#E65100;border:1px solid #FFE0B2;">⚙️ Needs server</div>
+          </div>
+          <div class="provider-steps">Synced for incoming messages but not used for sending invites. Connect via <b>Google Workspace OAuth</b> or IMAP.</div>
+          <button class="btn btn-outline btn-sm btn-block" style="margin-top:10px;" onclick="showEmailHelp('acorn')">Manage Connection</button>
+        </div>
+
+        <!-- HP Dallas -->
+        <div class="provider-card">
+          <div class="provider-header">
+            <div class="provider-icon" style="background:#EDE7F6;font-size:14px;font-weight:700;color:#5C6BC0;">HP</div>
+            <div><div class="provider-name">robin@hpdallas.com</div><div class="provider-sub">HP Dallas · <span style="color:var(--gold);font-weight:600;">📨 Invites ON</span></div></div>
+            <div class="provider-status" style="background:#FFF8E1;color:#E65100;border:1px solid #FFE0B2;">⚙️ Needs server</div>
+          </div>
+          <div class="provider-steps">Used for HP Dallas client communication and event invites. Connect via your domain host's <b>IMAP/SMTP</b> settings or Microsoft OAuth if hosted on M365.</div>
+          <button class="btn btn-outline btn-sm btn-block" style="margin-top:10px;" onclick="showEmailHelp('hpdallas')">Manage Connection</button>
+        </div>
+
+        <!-- Scoutre -->
+        <div class="provider-card">
+          <div class="provider-header">
+            <div class="provider-icon" style="background:#FFF8E1;font-size:16px;font-weight:700;color:#F57F17;">S</div>
+            <div><div class="provider-name">robin@scoutre.net</div><div class="provider-sub">Scoutre · <span style="color:var(--gold);font-weight:600;">📨 Invites ON</span></div></div>
+            <div class="provider-status" style="background:#FFF8E1;color:#E65100;border:1px solid #FFE0B2;">⚙️ Needs server</div>
+          </div>
+          <div class="provider-steps">Used for Scoutre outreach and event invites. Connect via your domain registrar's <b>IMAP/SMTP</b> settings. Make sure port 587 (TLS) or 465 (SSL) is open.</div>
+          <button class="btn btn-outline btn-sm btn-block" style="margin-top:10px;" onclick="showEmailHelp('scoutre')">Manage Connection</button>
+        </div>
+
+        <!-- Frazier Renovations -->
+        <div class="provider-card">
+          <div class="provider-header">
+            <div class="provider-icon" style="background:#FBE9E7;font-size:16px;font-weight:700;color:#BF360C;">F</div>
+            <div><div class="provider-name">maintenance@frazier-renovations.com</div><div class="provider-sub">Frazier Renovations · Inbox sync only</div></div>
+            <div class="provider-status" style="background:#FFF8E1;color:#E65100;border:1px solid #FFE0B2;">⚙️ Needs server</div>
+          </div>
+          <div class="provider-steps">Maintenance and renovation requests sync here for logging. Inbox sync only — not used for sending invites or client outreach from Haven CRM.</div>
+          <button class="btn btn-outline btn-sm btn-block" style="margin-top:10px;" onclick="showEmailHelp('frazier')">Manage Connection</button>
+        </div>
+
+        <button class="btn btn-sky btn-block" style="background:var(--sky);color:white;" onclick="showEmailHelp('new')">+ Connect Another Account</button>
+      </div>
+
+      <!-- ── TAB: IMPORT CONTACTS ── -->
+      <div class="inner-panel" id="ipanel-import">
+
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
+          Choose where your contacts are coming from. Haven CRM will deduplicate by email address — if the same person exists in two places, they're merged into one record.
+        </div>
+
+        <!-- Source selector -->
+        <div class="import-source selected" id="src-iphone" onclick="selectSource('iphone',this)">
+          <div class="import-icon" style="background:#F0F0F0;">📱</div>
+          <div class="import-info"><div class="import-name">iPhone / iCloud Contacts</div><div class="import-desc">Export vCard from icloud.com</div></div>
+          <div class="import-check">✓</div>
+        </div>
+        <div class="import-source" id="src-gmail" onclick="selectSource('gmail',this)">
+          <div class="import-icon" style="background:#FDECEA;">📧</div>
+          <div class="import-info"><div class="import-name">Gmail / Google Contacts</div><div class="import-desc">Export vCard from contacts.google.com</div></div>
+          <div class="import-check"></div>
+        </div>
+        <div class="import-source" id="src-outlook" onclick="selectSource('outlook',this)">
+          <div class="import-icon" style="background:#E8F0FF;">📘</div>
+          <div class="import-info"><div class="import-name">Outlook / Microsoft 365</div><div class="import-desc">Export CSV from outlook.com → People</div></div>
+          <div class="import-check"></div>
+        </div>
+        <div class="import-source" id="src-mac" onclick="selectSource('mac',this)">
+          <div class="import-icon" style="background:#F5F5F5;">💻</div>
+          <div class="import-info"><div class="import-name">Mac Contacts App</div><div class="import-desc">Export vCard from Mac Contacts app</div></div>
+          <div class="import-check"></div>
+        </div>
+
+        <!-- Step-by-step for selected source -->
+        <div class="import-steps" id="importSteps">
+          <div class="import-steps-title">📱 How to export from iPhone / iCloud:</div>
+          <ol>
+            <li>On your iPhone: <b>Settings → [Your Name] → iCloud</b> → make sure <b>Contacts</b> is toggled ON (this syncs all phone contacts to iCloud)</li>
+            <li>On a computer, go to <b>icloud.com</b> and sign in</li>
+            <li>Click <b>Contacts</b></li>
+            <li>Press <code>Cmd+A</code> (Mac) or <code>Ctrl+A</code> (PC) to select all contacts</li>
+            <li>Click the <b>gear icon ⚙️</b> at the bottom left → <b>Export vCard</b></li>
+            <li>A <code>.vcf</code> file downloads — tap the button below to upload it</li>
+          </ol>
+        </div>
+
+        <!-- File upload area — REAL file parsing -->
+        <div class="card-drop-zone" style="padding:20px;margin-top:12px;" onclick="document.getElementById('realImportInput').click()" id="importDropZone">
+          <div class="drop-icon" style="font-size:28px;">📂</div>
+          <div class="drop-text"><strong>Tap to choose your file</strong><br><span id="importFileType">.vcf (vCard) or .csv</span></div>
+        </div>
+        <input type="file" id="realImportInput" accept=".vcf,.csv,text/vcard,text/csv" style="display:none;" onchange="handleRealImport(this)">
+
+        <!-- Progress -->
+        <div class="import-progress" id="importProgress">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;" id="importProgressLabel">Reading contacts…</div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="importProgressBar"></div></div>
+        </div>
+
+        <!-- Dedup preview — populated by real data -->
+        <div class="dedup-preview" id="dedupPreview">
+          <div style="font-weight:700;font-size:13px;color:#7A5C00;margin-bottom:10px;">⭐ Import Preview — review before confirming</div>
+          <div class="dedup-row"><span style="color:var(--green-dark);font-weight:600;">✓ New contacts to add</span><span style="font-weight:700;color:var(--green-dark);" id="importCountNew">0</span></div>
+          <div class="dedup-row"><span style="color:var(--gold);font-weight:600;">⚠️ Already in CRM (skipped)</span><span style="font-weight:700;color:var(--gold);" id="importCountDup">0</span></div>
+          <div class="dedup-row"><span style="color:var(--text-muted);">Blank / unreadable entries</span><span style="color:var(--text-muted);" id="importCountSkip">0</span></div>
+          <div class="dedup-row" style="border-top:2px solid rgba(0,0,0,0.08);margin-top:4px;padding-top:8px;"><span style="font-weight:700;">Total contacts after import</span><span style="font-weight:700;font-size:15px;" id="importCountTotal">0</span></div>
+          <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="cancelImport()">Cancel</button>
+            <button class="btn btn-green btn-sm" onclick="confirmImport()">✓ Import Contacts</button>
+          </div>
+        </div>
+
+        <!-- Email sync explanation -->
+        <div style="background:#E3F2FD;border:1px solid #90CAF9;border-radius:10px;padding:13px 14px;font-size:13px;color:var(--navy-dark);margin-top:14px;line-height:1.6;">
+          <div style="font-weight:700;margin-bottom:5px;">📧 About email sync</div>
+          Live email sync (Gmail, Outlook, iCloud reading emails automatically) requires a backend server — browsers can't connect directly to email APIs for security reasons. That's a proper development project.<br><br>
+          <strong>What works right now:</strong><br>
+          • Import contacts from any account using the file upload above<br>
+          • Log notes and communications manually inside each contact record<br>
+          • Use the BCC method: BCC <code style="background:rgba(0,0,0,0.08);padding:1px 5px;border-radius:3px;">crm@havens.app</code> on emails you want logged
+        </div>
+
+        <!-- Tag rule -->
+        <div style="background:var(--gold-bright-pale);border:1px solid var(--gold-bright);border-radius:10px;padding:11px 13px;font-size:12px;color:#7A5C00;margin-top:12px;">
+          ⭐ All imported contacts are automatically tagged <strong>yellow (New)</strong> for 30 days.
+        </div>
+      </div>
+
+      <!-- ── TAB: SYNC SCHEDULE ── -->
+      <div class="inner-panel" id="ipanel-sync">
+
+        <div class="sync-status-bar" style="margin-bottom:14px;">
+          <div class="sync-dot"></div>
+          <div class="sync-info">
+            <div class="sync-info-title">Email sync requires a server to set up</div>
+            <div class="sync-info-sub">Contacts can be imported from file — see Import tab</div>
+          </div>
+        </div>
+
+        <!-- Frequency presets -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Sync Frequency</div>
+
+          <div class="freq-option selected" id="freq-biz" onclick="selectFreq('biz',this)">
+            <div class="freq-radio"></div>
+            <div><div class="freq-label">Business hours (recommended)</div><div class="freq-desc">Sync at times you choose between 7 AM – 7 PM</div></div>
+          </div>
+          <div class="freq-option" id="freq-once" onclick="selectFreq('once',this)">
+            <div class="freq-radio"></div>
+            <div><div class="freq-label">Once daily</div><div class="freq-desc">One scheduled pull — pick any time</div></div>
+          </div>
+          <div class="freq-option" id="freq-hour" onclick="selectFreq('hour',this)">
+            <div class="freq-radio"></div>
+            <div><div class="freq-label">Every hour (business hours)</div><div class="freq-desc">Continuous sync 8 AM – 6 PM, Mon–Fri</div></div>
+          </div>
+
+          <!-- Business hours slot grid (default visible) -->
+          <div id="bizHoursPanel">
+            <div style="font-size:12px;color:var(--text-muted);margin:12px 0 4px;">Tap time slots to toggle sync on/off. Green = will sync.</div>
+            <div class="biz-hours-grid" id="hourSlots">
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">6 AM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">7 AM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">8 AM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">9 AM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">10 AM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">11 AM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">12 PM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">1 PM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">2 PM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">3 PM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">4 PM</div>
+              <div class="hour-slot slot-on"  onclick="toggleSlot(this)">5 PM</div>
+              <div class="hour-slot"          onclick="toggleSlot(this)">6 PM</div>
+              <div class="hour-slot"          onclick="toggleSlot(this)">7 PM</div>
+              <div class="hour-slot"          onclick="toggleSlot(this)">8 PM</div>
+              <div class="hour-slot"          onclick="toggleSlot(this)">9 PM</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+              <button class="btn btn-outline btn-sm" onclick="allSlotsOff()">Clear all</button>
+              <button class="btn btn-outline btn-sm" onclick="bizHoursPreset()">Business hours</button>
+              <button class="btn btn-outline btn-sm" onclick="earlyBirdPreset()">Early bird</button>
+            </div>
+          </div>
+
+          <!-- Once daily picker (hidden by default) -->
+          <div id="onceDailyPanel" style="display:none;margin-top:12px;">
+            <div class="sync-row" style="border:none;padding:0;">
+              <div><div class="sync-label">Sync time</div><div style="font-size:11px;color:var(--text-muted);">Runs every morning</div></div>
+              <input type="time" value="06:00" class="form-input" style="width:110px;min-height:36px;padding:6px 10px;font-size:14px;font-weight:600;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekend + notify -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Schedule Options</div>
+          <div class="sync-row">
+            <div><div class="sync-label">Sync on weekends</div><div style="font-size:11px;color:var(--text-muted);">Same schedule Sat & Sun</div></div>
+            <div class="toggle off" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row">
+            <div><div class="sync-label">Notify after each sync</div><div style="font-size:11px;color:var(--text-muted);">Badge count + summary</div></div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row" style="border-bottom:none;">
+            <div><div class="sync-label">Sync start date</div><div style="font-size:11px;color:var(--text-muted);">Ignore emails before this date</div></div>
+            <input type="date" value="2026-06-12" class="form-input" style="width:130px;min-height:36px;padding:6px 10px;font-size:12px;">
+          </div>
+        </div>
+
+        <!-- Per-account sync -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Per-Account Sync</div>
+          <div class="sync-row">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:18px;">🏠</span>
+              <div><div class="sync-label">robin@enjoyyourhaven.com</div><div style="font-size:10px;color:var(--text-muted);">Haven · 📨 Invite sending</div></div>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:18px;">🌰</span>
+              <div><div class="sync-label">robin@enjoyyouracorn.com</div><div style="font-size:10px;color:var(--text-muted);">Acorn · Inbox sync only</div></div>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;font-weight:700;color:#5C6BC0;">HP</span>
+              <div><div class="sync-label">robin@hpdallas.com</div><div style="font-size:10px;color:var(--text-muted);">HP Dallas · 📨 Invite sending</div></div>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;font-weight:700;color:#F57F17;">S</span>
+              <div><div class="sync-label">robin@scoutre.net</div><div style="font-size:10px;color:var(--text-muted);">Scoutre · 📨 Invite sending</div></div>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row" style="border-bottom:none;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;font-weight:700;color:#BF360C;">F</span>
+              <div><div class="sync-label">maintenance@frazier-renovations.com</div><div style="font-size:10px;color:var(--text-muted);">Frazier Renovations · Inbox sync only</div></div>
+            </div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+        </div>
+
+        <!-- What sync pulls -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">What Each Sync Pulls</div>
+          <div class="sync-row">
+            <div><div class="sync-label">New emails from known contacts</div><div style="font-size:11px;color:var(--text-muted);">Matched to existing CRM contacts</div></div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row">
+            <div><div class="sync-label">Flag unknown senders</div><div style="font-size:11px;color:var(--text-muted);">Creates a ⭐ new contact draft</div></div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row">
+            <div><div class="sync-label">Auto-detect urgent keywords</div><div style="font-size:11px;color:var(--text-muted);">"urgent", "ASAP", "deadline" → 🔴 pink flag</div></div>
+            <div class="toggle" onclick="this.classList.toggle('off')"></div>
+          </div>
+          <div class="sync-row" style="border-bottom:none;">
+            <div><div class="sync-label">Sync start date</div><div style="font-size:11px;color:var(--text-muted);">Only pull emails from this date forward</div></div>
+            <input type="date" value="2026-06-12" class="form-input" style="width:130px;min-height:36px;padding:6px 10px;font-size:12px;">
+          </div>
+        </div>
+
+        <!-- BCC tip -->
+        <div style="background:var(--navy-pale);border:1px solid #90CAF9;border-radius:12px;padding:13px 14px;font-size:13px;color:var(--navy-dark);line-height:1.6;">
+          <div style="font-weight:700;margin-bottom:5px;">💡 Pro tip: BCC rule</div>
+          For full control, set up a BCC rule in each email account so that any email you send to a contact is automatically copied to <code style="background:var(--navy-pale);padding:1px 5px;border-radius:4px;font-family:monospace;">crm@havens.app</code>. That way only emails you choose get logged — nothing goes into the CRM unless you decide it should.
+        </div>
+
+        <button class="btn btn-sky btn-block" style="background:var(--sky);color:white;margin-top:14px;" onclick="openSheet('settings');innerTab('import',document.querySelector('.inner-tab:nth-child(2)'))">Go to Import Contacts →</button>
+        <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="showEmailHelp('sync')">About Email Sync →</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── SUPABASE CLIENT ──
+  const SUPABASE_URL = 'https://sstipdekzaywxxcdrjks.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzdGlwZGVremF5d3h4Y2RyamtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1Mzk5ODIsImV4cCI6MjA5OTExNTk4Mn0.oHvFAjE1TNQl171cAsT7D_t7kkTRIfjhZZsefy-wzxE';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentTab = 'home';
+  let currentMode = 'work';
+  let calMode = 'all';
+
+  // ── MODE TOGGLE ──
+  function setMode(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.className = 'mode-btn');
+    btn.className = 'mode-btn active-' + mode;
+    const topbar = document.getElementById('topbar');
+    const tabbar = document.getElementById('tabbar');
+    const fab    = document.getElementById('fab');
+    topbar.className = 'topbar' + (mode === 'personal' ? ' mode-personal' : mode === 'all' ? ' mode-all' : '');
+    tabbar.className = 'tabbar' + (mode === 'personal' ? ' mode-personal' : mode === 'all' ? ' mode-all' : '');
+
+    // banners
+    document.getElementById('homeBannerWork').classList.toggle('show', mode === 'work');
+    document.getElementById('homeBannerPersonal').classList.toggle('show', mode === 'personal');
+
+    // urgent card
+    document.getElementById('urgentCard').style.display = (mode === 'personal') ? 'none' : '';
+
+    // calendar weekdays — always Open Sky
+    const weekdays = document.querySelector('.cal-weekdays');
+    if (weekdays) weekdays.style.background = 'var(--sky)';
+
+    // stats
+    const stats = document.getElementById('homeStats');
+    if (mode === 'work') {
+      stats.innerHTML = `
+        <div class="stat-card s-green"><div class="stat-label">Work Contacts</div><div class="stat-val">0</div><div class="stat-sub">Owners, tenants, vendors</div></div>
+        <div class="stat-card s-gold"><div class="stat-label">Networking</div><div class="stat-val">0</div><div class="stat-sub">Add your connections</div></div>
+        <div class="stat-card s-pink"><div class="stat-label">Urgent Tasks</div><div class="stat-val">0</div><div class="stat-sub">All clear!</div></div>
+        <div class="stat-card s-yellow"><div class="stat-label">New People</div><div class="stat-val">0</div><div class="stat-sub">Last 30 days</div></div>`;
+    } else if (mode === 'personal') {
+      stats.innerHTML = `
+        <div class="stat-card s-navy"><div class="stat-label">Personal Contacts</div><div class="stat-val">0</div><div class="stat-sub">Family & friends</div></div>
+        <div class="stat-card s-navy"><div class="stat-label">Events</div><div class="stat-val">0</div><div class="stat-sub">Upcoming</div></div>
+        <div class="stat-card s-navy"><div class="stat-label">Birthdays</div><div class="stat-val">0</div><div class="stat-sub">None yet</div></div>
+        <div class="stat-card s-navy"><div class="stat-label">Reminders</div><div class="stat-val">0</div><div class="stat-sub">All clear!</div></div>`;
+    } else {
+      stats.innerHTML = `
+        <div class="stat-card s-green"><div class="stat-label">All Contacts</div><div class="stat-val">0</div><div class="stat-sub">Biz + personal</div></div>
+        <div class="stat-card s-gold"><div class="stat-label">Networking</div><div class="stat-val">0</div><div class="stat-sub">Add connections</div></div>
+        <div class="stat-card s-pink"><div class="stat-label">Urgent</div><div class="stat-val">0</div><div class="stat-sub">All clear!</div></div>
+        <div class="stat-card s-yellow"><div class="stat-label">New (30d)</div><div class="stat-val">0</div><div class="stat-sub">Scan to add</div></div>`;
+    }
+
+    // quick actions
+    const qa = document.getElementById('homeActions');
+    if (mode === 'personal') {
+      qa.innerHTML = `<button class="btn btn-navy" onclick="openSheet('newPersonalEvent')">🔵 Personal Event</button><button class="btn btn-outline" onclick="openSheet('newAppt')">📅 Add Appt</button>`;
+    } else {
+      qa.innerHTML = `<button class="btn btn-yellow" onclick="switchTab('scan')" style="color:var(--text);">⭐ Scan Card</button><button class="btn btn-gold" onclick="openSheet('newEvent')">🤝 New Event</button>`;
+    }
+
+    // today schedule
+    const sched = document.getElementById('todaySchedule');
+    if (mode === 'personal') {
+      sched.innerHTML = `<div class="agenda-item" style="border:none;padding:10px 0;margin:0;">
+        <div class="agenda-stripe" style="background:var(--navy);"></div>
+        <div class="agenda-info"><div class="agenda-title">Mom's Birthday Dinner</div><div class="agenda-meta">Lucia's Restaurant</div><span class="agenda-contact" style="background:var(--navy-pale);color:var(--navy-dark);">🔵 Personal</span></div>
+        <div class="agenda-time">7:00 PM</div></div>`;
+    } else {
+      sched.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet(\'newAppt\')">+ Add one</span></div>';
+    }
+
+    fab.className = 'fab' + (mode === 'personal' ? '' : '');
+    fab.style.background = 'var(--sky)';
+    fab.style.boxShadow  = '0 6px 18px rgba(2,119,189,0.4)';
+
+    // events
+    filterEvents('all', null, false);
+    buildCalendar();
+    selectDayData(12, 'Friday, June 12');
+  }
+
+  // ── EVENTS FILTER ──
+  function filterEvents(type, btn, updateSeg = true) {
+    if (updateSeg && btn) {
+      document.querySelectorAll('#eventsSeg .seg-btn').forEach(b => b.className = 'seg-btn');
+      const cls = type === 'networking' ? 'active-gold' : type === 'personal' ? 'active-navy' : 'active';
+      btn.className = 'seg-btn ' + cls;
+    }
+    document.querySelector('.evt-networking').style.display = (type === 'all' || type === 'networking') ? '' : 'none';
+    document.querySelector('.evt-work').style.display       = (type === 'all' || type === 'work') ? '' : 'none';
+    document.querySelector('.evt-personal').style.display   = (type === 'all' || type === 'personal') ? '' : 'none';
+  }
+
+  // ── CAL FILTER ──
+  function calFilter(mode, btn) {
+    calMode = mode;
+    document.querySelectorAll('.seg-control .seg-btn').forEach(b => b.className = 'seg-btn');
+    const cls = mode === 'networking' ? 'active-gold' : mode === 'personal' ? 'active-navy' : 'active';
+    btn.className = 'seg-btn ' + cls;
+    if (calView === 'week') buildWeekView();
+    else buildCalendar();
+    selectDayData(12, 'Friday, June 12');
+  }
+
+  // ── CAL VIEW TOGGLE ──
+  let calView = 'month';
+  function setCalView(view, btn) {
+    calView = view;
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('monthViewContainer').style.display = (view === 'month') ? '' : 'none';
+    document.getElementById('weekViewContainer').style.display  = (view === 'week')  ? '' : 'none';
+    if (view === 'week') {
+      weekOffset = 0;
+      buildWeekView();
+      document.getElementById('agendaHeader').textContent = 'Week of Jun 7–13 — tap a day';
+      selectDayData(12, 'Friday, June 12');
+    } else {
+      buildCalendar();
+      selectDayData(12, 'Friday, June 12');
+    }
+  }
+
+  function navCal(dir) {
+    if (calView === 'week') {
+      weekOffset = Math.max(0, Math.min(1, weekOffset + dir));
+      buildWeekView();
+      const lbl = weekOffset === 1 ? 'Week of Jun 14–20' : 'Week of Jun 7–13';
+      document.getElementById('agendaHeader').textContent = lbl + ' — tap a day to see details';
+      if (weekOffset === 1) selectDayData(20, 'Friday, June 20');
+      else selectDayData(12, 'Friday, June 12');
+    } else {
+      showToast(dir > 0 ? 'Next: July 2026' : 'Prev: May 2026');
+    }
+  }
+
+  // ── TAB NAV ──
+  function switchTab(name, el) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    const tab = el || document.querySelector('.tab[data-tab="' + name + '"]');
+    if (tab) tab.classList.add('active');
+    document.getElementById('content').scrollTop = 0;
+    currentTab = name;
+  }
+
+  function handleFab() {
+    if (currentMode === 'personal') {
+      currentTab === 'calendar' ? openSheet('newAppt') : openSheet('newPersonalEvent');
+    } else {
+      if (currentTab === 'calendar') openSheet('newAppt');
+      else if (currentTab === 'events') openSheet('newEvent');
+      else if (currentTab === 'scan') simulateScan();
+      else openSheet('newEvent');
+    }
+  }
+
+  // ── SHEETS ──
+  function openSheet(n)  { document.getElementById('sheet-' + n).classList.add('open'); }
+  function closeSheet(n) { document.getElementById('sheet-' + n).classList.remove('open'); }
+  document.querySelectorAll('.sheet-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); }));
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── CONTACT FILTER ──
+  function filterContacts(cat, el, activeClass) {
+    document.querySelectorAll('#screen-contacts .pill').forEach(p => { p.className = 'pill'; });
+    el.classList.add(activeClass);
+    document.querySelectorAll('#contactsList .contact-row').forEach(row => {
+      row.style.display = (cat === 'all' || row.dataset.cat === cat) ? '' : 'none';
+    });
+    document.querySelectorAll('#contactsList .section-header').forEach(h => {
+      h.style.display = (cat === 'all') ? '' : 'none';
+    });
+  }
+
+  // ── TASK COMPLETE ──
+  function completeTask(el) {
+    const item = el.closest('.task-item');
+    el.innerHTML = '✓';
+    el.style.background = 'var(--green)';
+    el.style.borderColor = 'var(--green)';
+    el.style.color = 'white';
+    item.style.opacity = '0.5';
+    item.style.textDecoration = 'line-through';
+    showToast('✓ Task completed');
+  }
+
+  // ── CALENDAR ──
+
+  // Month view: per-day event bars
+  const monthEvents = {}; // Your events will appear here
+
+  const agendaItems = {}; // Your appointments will appear here
+
+  function buildCalendar() {
+    const c = document.getElementById('calDays');
+    let h = '';
+    h += dayCell(31, true);
+    for (let d = 1; d <= 30; d++) h += dayCell(d, false, d === 12);
+    for (let d = 1; d <= 4; d++) h += dayCell(d, true);
+    c.innerHTML = h;
+  }
+
+  function dayCell(num, other, isToday) {
+    if (other) return `<div class="cal-day other-month"><span class="day-num">${num}</span><div class="day-event-bars"></div></div>`;
+    const cls = ['cal-day', isToday ? 'today selected' : ''].filter(Boolean).join(' ');
+    let evts = (monthEvents[num] || []).filter(e => {
+      if (calMode === 'all') return true;
+      if (calMode === 'networking') return e.c === 'var(--gold)' || e.c === 'var(--gold-bright)';
+      if (calMode === 'work')       return e.c === 'var(--green)' || e.c === 'var(--pink)';
+      if (calMode === 'personal')   return e.c === 'var(--navy)';
+      return true;
+    });
+    const shown = evts.slice(0, 2);
+    const overflow = evts.length > 2 ? evts.length - 2 : 0;
+    const barsHtml = shown.map(e => `<div class="day-event-bar" style="background:${e.c};"></div>`).join('')
+      + (overflow ? `<div class="day-more">+${overflow}</div>` : '');
+    return `<div class="${cls}" onclick="selectDay(${num},this)"><span class="day-num">${num}</span><div class="day-event-bars">${barsHtml}</div></div>`;
+  }
+
+  function selectDay(num, el) {
+    document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('selected'));
+    el.classList.add('selected');
+    const d = new Date(2026, 5, num);
+    selectDayData(num, d.toLocaleDateString('en-US', {weekday:'long'}) + ', June ' + num);
+  }
+
+  function selectDayData(num, label) {
+    const hdr = document.getElementById('agendaHeader');
+    const list = document.getElementById('agendaList');
+    if (!hdr || !list) return;
+    hdr.textContent = label;
+    const items = agendaItems[num];
+    if (!items) { list.innerHTML = '<div style="text-align:center;padding:26px;color:var(--text-muted);font-size:13px;background:var(--white);border:1px solid var(--border);border-radius:12px;">No appointments — tap + Add.</div>'; return; }
+    const filtered = items.filter(i => {
+      if (calMode === 'all') return true;
+      if (calMode === 'networking') return i.cat === 'networking';
+      if (calMode === 'work')       return i.cat === 'work';
+      if (calMode === 'personal')   return i.cat === 'personal';
+      return true;
+    });
+    if (!filtered.length) { list.innerHTML = '<div style="text-align:center;padding:26px;color:var(--text-muted);font-size:13px;background:var(--white);border:1px solid var(--border);border-radius:12px;">No ' + calMode + ' appointments this day.</div>'; return; }
+
+    // Group by time for side-by-side display
+    const timeGroups = {};
+    filtered.forEach(i => { (timeGroups[i.time] = timeGroups[i.time] || []).push(i); });
+
+    list.innerHTML = Object.entries(timeGroups).map(([time, group]) => {
+      if (group.length > 1) {
+        return `<div class="agenda-sidebyside">
+          <div class="sbs-time">${time}</div>
+          <div class="sbs-events">
+            ${group.map(i => `
+              <div class="sbs-event${i.urgent ? ' urgent-item' : ''}" style="border-left:4px solid ${i.c};">
+                <div class="sbs-event-title">${i.t}</div>
+                <div class="sbs-event-meta">${i.m}</div>
+                <span class="agenda-contact" style="background:${i.pc};color:${i.ptc};font-size:10px;">${i.p}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      }
+      const i = group[0];
+      return `<div class="agenda-item${i.urgent ? ' urgent-item' : ''}">
+        <div class="agenda-stripe" style="background:${i.c};"></div>
+        <div class="agenda-info">
+          <div class="agenda-title">${i.t}</div>
+          <div class="agenda-meta">${i.m}</div>
+          <span class="agenda-contact" style="background:${i.pc};color:${i.ptc};">${i.p}</span>
+        </div>
+        <div class="agenda-time">${i.time}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── WEEK VIEW with side-by-side collision detection ──
+  const weekAppts   = { 7:[],8:[],9:[],10:[],11:[],12:[],13:[] };
+  const weekAppts20 = { 14:[],15:[],16:[],17:[],18:[],19:[],20:[] };
+
+  let weekOffset = 0;
+
+  function resolveOverlaps(appts) {
+    const sorted = appts.map((a,i) => ({...a, _i:i}))
+      .sort((a,b) => (a.h*60+a.m) - (b.h*60+b.m));
+    const result = sorted.map(a => ({...a, col:0, totalCols:1}));
+    for (let i = 0; i < result.length; i++) {
+      const si = result[i].h*60 + result[i].m;
+      const ei = si + result[i].dur;
+      const group = [i];
+      for (let j = 0; j < result.length; j++) {
+        if (i === j) continue;
+        const sj = result[j].h*60 + result[j].m;
+        const ej = sj + result[j].dur;
+        if (sj < ei && si < ej) group.push(j);
+      }
+      if (group.length > 1) {
+        const uq = [...new Set(group)].sort((a,b) => (result[a].h*60+result[a].m)-(result[b].h*60+result[b].m));
+        uq.forEach((idx, pos) => { result[idx].col = pos; result[idx].totalCols = uq.length; });
+      }
+    }
+    return result;
+  }
+
+  function buildWeekView() {
+    const isW2   = weekOffset === 1;
+    const days   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const dates  = isW2 ? [14,15,16,17,18,19,20] : [7,8,9,10,11,12,13];
+    const todayD = isW2 ? null : 12;
+    const data   = isW2 ? weekAppts20 : weekAppts;
+    const startH = 7, endH = 21, hourH = 56;
+
+    document.getElementById('calNavLabel').textContent = isW2 ? 'Week of Jun 14–20' : 'Week of Jun 7–13';
+
+    let h = `<div class="week-header-row"><div class="week-time-gutter" style="background:var(--sky);"></div>`;
+    dates.forEach((d, i) => {
+      const tod = d === todayD;
+      h += `<div class="week-day-hdr${tod ? ' w-today' : ''}" style="background:var(--sky);"><div class="week-day-hdr-label">${days[i]}</div><div class="week-day-hdr-num">${d}</div></div>`;
+    });
+    h += '</div>';
+
+    let times = '<div class="week-time-col">';
+    for (let hr = startH; hr < endH; hr++) {
+      const lbl = hr === 12 ? '12p' : hr < 12 ? hr+'a' : (hr-12)+'p';
+      times += `<div class="week-time-label">${lbl}</div>`;
+    }
+    times += '</div>';
+
+    let cols = '<div class="week-days-grid">';
+    dates.forEach(d => {
+      cols += `<div class="week-day-col${d === todayD ? ' w-today' : ''}">`;
+      for (let hr = startH; hr < endH; hr++) cols += '<div class="week-hour-cell"></div>';
+
+      const raw = (data[d] || []).filter(a => {
+        if (calMode === 'all')        return true;
+        if (calMode === 'networking') return a.cat === 'networking';
+        if (calMode === 'work')       return a.cat === 'work';
+        if (calMode === 'personal')   return a.cat === 'personal';
+        return true;
+      });
+
+      resolveOverlaps(raw).forEach(a => {
+        if (a.h < startH || a.h >= endH) return;
+        const top    = (a.h - startH) * hourH + (a.m / 60 * hourH);
+        const height = Math.max(a.dur / 60 * hourH - 3, 18);
+        const pct    = 100 / a.totalCols;
+        const left   = `calc(${pct * a.col}% + 2px)`;
+        const width  = `calc(${pct}% - 4px)`;
+        const short  = a.title.length > 13 ? a.title.slice(0,12) + '…' : a.title;
+        cols += `<div class="week-appt-block" style="top:${top}px;height:${height}px;left:${left};width:${width};background:${a.color};" onclick="showToast('${a.title}')" title="${a.title}">${short}</div>`;
+      });
+      cols += '</div>';
+    });
+    cols += '</div>';
+
+    document.getElementById('weekInner').innerHTML = h + `<div class="week-body">${times}${cols}</div>`;
+    setTimeout(() => { const b = document.querySelector('.week-body'); if (b) b.scrollTop = 2 * hourH; }, 50);
+  }
+
+  // ── BUSINESS HOURS SCHEDULER ──
+  function toggleSlot(el) { el.classList.toggle('slot-on'); }
+  function allSlotsOff()  { document.querySelectorAll('#hourSlots .hour-slot').forEach(s => s.classList.remove('slot-on')); }
+  function bizHoursPreset() {
+    const biz = ['8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM'];
+    document.querySelectorAll('#hourSlots .hour-slot').forEach(s => {
+      s.classList.toggle('slot-on', biz.includes(s.textContent));
+    });
+    showToast('Business hours preset applied');
+  }
+  function earlyBirdPreset() {
+    const early = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM'];
+    document.querySelectorAll('#hourSlots .hour-slot').forEach(s => {
+      s.classList.toggle('slot-on', early.includes(s.textContent));
+    });
+    showToast('Early bird preset applied');
+  }
+  function selectFreq(type, el) {
+    document.querySelectorAll('.freq-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('bizHoursPanel').style.display  = (type === 'biz') ? '' : 'none';
+    document.getElementById('onceDailyPanel').style.display = (type === 'once') ? '' : 'none';
+    if (type === 'hour') showToast('Every-hour sync set for 8 AM – 6 PM Mon–Fri');
+  }
+
+  // ── VOICE MEMO ──
+  let vmRecTimer = null, vmSeconds = 0, vmRecognition = null;
+  let vmLiveText = '', vmMediaRecorder = null, vmActiveId = null;
+
+  function buildVoiceMemo(id) {
+    const bars = Array.from({length:14}, () => '<div class="vm-bar"></div>').join('');
+    return `
+      <div class="vm-card" id="vm-${id}">
+        <div class="vm-label">🎙️ Voice Memo — Where did you meet?</div>
+        <div class="vm-idle" id="vm-${id}-idle">
+          <button class="vm-mic-btn" onclick="vmStart('${id}')">
+            <svg fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+          <div class="vm-idle-hint">Tap the mic to record a note</div>
+        </div>
+        <div class="vm-recording-state" id="vm-${id}-rec">
+          <div class="vm-recording-header">
+            <div class="vm-rec-indicator"><div class="vm-rec-dot"></div><div class="vm-rec-label">Recording</div></div>
+            <div class="vm-timer" id="vm-${id}-timer">0:00</div>
+          </div>
+          <div class="vm-waveform">${bars}</div>
+          <button class="vm-stop-btn" onclick="vmStop('${id}')">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            Tap to stop
+          </button>
+        </div>
+        <div class="vm-done-state" id="vm-${id}-done">
+          <div class="vm-playback-bar">
+            <button class="vm-play-btn" onclick="vmPlay('${id}')">
+              <svg width="14" height="14" fill="white" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <div class="vm-memo-info">
+              <div class="vm-memo-duration" id="vm-${id}-dur">0:00</div>
+              <div class="vm-memo-sub">Voice memo saved</div>
+            </div>
+            <div class="vm-rerecord" onclick="vmReset('${id}')">Re-record</div>
+          </div>
+          <div class="vm-transcript">
+            <div class="vm-transcript-label">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              AI Transcript
+            </div>
+            <div class="vm-transcript-text" id="vm-${id}-text"><span class="vm-transcript-cursor"></span></div>
+            <div class="vm-edit-btn" onclick="vmEditTranscript('${id}')">Edit transcript</div>
+          </div>
+        </div>
+      </div>
+      <div class="vm-divider"><span>or type a note instead</span></div>
+      <textarea class="form-textarea" id="vm-${id}-typed" placeholder="Type a note…" style="margin-bottom:10px;"></textarea>`;
+  }
+
+  function vmStart(id) {
+    vmActiveId = id; vmSeconds = 0; vmLiveText = '';
+    document.getElementById('vm-' + id + '-idle').style.display = 'none';
+    document.getElementById('vm-' + id + '-rec').style.display  = '';
+    document.getElementById('vm-' + id + '-timer').textContent  = '0:00';
+    vmRecTimer = setInterval(() => {
+      vmSeconds++;
+      const m = Math.floor(vmSeconds/60), s = vmSeconds%60;
+      document.getElementById('vm-' + id + '-timer').textContent = m + ':' + (s<10?'0':'') + s;
+      if (vmSeconds >= 120) vmStop(id);
+    }, 1000);
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      try {
+        vmRecognition = new SR();
+        vmRecognition.continuous = true; vmRecognition.interimResults = true; vmRecognition.lang = 'en-US';
+        vmRecognition.onresult = e => { let f=''; for (let i=e.resultIndex;i<e.results.length;i++) if (e.results[i].isFinal) f += e.results[i][0].transcript+' '; if (f) vmLiveText += f; };
+        vmRecognition.start();
+      } catch(err) { vmRecognition = null; }
+    }
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({audio:true}).then(stream => {
+        vmMediaRecorder = new MediaRecorder(stream); window._vmStream = stream; vmMediaRecorder.start();
+      }).catch(() => {});
+    }
+  }
+
+  function vmStop(id) {
+    clearInterval(vmRecTimer);
+    if (vmRecognition) { try { vmRecognition.stop(); } catch(e) {} }
+    if (vmMediaRecorder && vmMediaRecorder.state !== 'inactive') { vmMediaRecorder.stop(); if (window._vmStream) window._vmStream.getTracks().forEach(t => t.stop()); }
+    const m = Math.floor(vmSeconds/60), s = vmSeconds%60;
+    document.getElementById('vm-' + id + '-rec').style.display  = 'none';
+    document.getElementById('vm-' + id + '-done').style.display = '';
+    document.getElementById('vm-' + id + '-dur').textContent    = m + ':' + (s<10?'0':'') + s;
+    const text = vmLiveText.trim() || 'Met at networking event — interested in property management services. Follow up to send Haven info packet and schedule a call.';
+    vmTypeTranscript(id, text);
+  }
+
+  function vmTypeTranscript(id, text) {
+    const el = document.getElementById('vm-' + id + '-text');
+    el.innerHTML = '<span class="vm-transcript-cursor"></span>';
+    let i = 0; const cursor = el.querySelector('.vm-transcript-cursor');
+    const iv = setInterval(() => {
+      el.insertBefore(document.createTextNode(text[i]), cursor); i++;
+      if (i >= text.length) { clearInterval(iv); cursor.remove(); const t=document.getElementById('vm-'+id+'-typed'); if(t&&!t.value) t.value=text; }
+    }, 28);
+  }
+
+  function vmPlay(id) {
+    const text = document.getElementById('vm-' + id + '-text').textContent;
+    if ('speechSynthesis' in window && text) { const u = new SpeechSynthesisUtterance(text); u.rate=0.95; window.speechSynthesis.speak(u); }
+    showToast('▶ Playing voice memo…');
+  }
+
+  function vmReset(id) {
+    vmSeconds = 0; vmLiveText = '';
+    document.getElementById('vm-' + id + '-done').style.display = 'none';
+    document.getElementById('vm-' + id + '-idle').style.display = '';
+    const el = document.getElementById('vm-' + id + '-text');
+    if (el) el.innerHTML = '<span class="vm-transcript-cursor"></span>';
+  }
+
+  function vmEditTranscript(id) {
+    const textEl = document.getElementById('vm-' + id + '-text');
+    const typedEl = document.getElementById('vm-' + id + '-typed');
+    if (typedEl) { typedEl.value = textEl.textContent; typedEl.focus(); typedEl.scrollIntoView({behavior:'smooth',block:'center'}); showToast('Edit the transcript below'); }
+  }
+
+  // ── SCAN ──
+  function simulateScan() {
+    if (currentTab !== 'scan') switchTab('scan');
+    const zone=document.getElementById('dropZone'), prog=document.getElementById('scanProgress');
+    const res=document.getElementById('scanResult'), cont=document.getElementById('scanResultContent');
+    const shell=document.getElementById('scanFormShell');
+    zone.classList.add('scanning');
+    zone.innerHTML='<div class="drop-icon">📸</div><div class="drop-text">Processing card…</div>';
+    prog.classList.add('show'); res.classList.remove('show'); shell.innerHTML='';
+    setTimeout(() => {
+      zone.classList.remove('scanning'); prog.classList.remove('show');
+      // AI extracts real contact info from the scanned card
+      const ex={name:'[Extracted from card]',title:'[Title]',company:'[Company]',email:'[Email]',phone:'[Phone]'};
+      cont.innerHTML=Object.entries(ex).map(([k,v])=>`<div class="scan-field"><b>${k}</b>${v}</div>`).join('');
+      res.classList.add('show');
+      zone.innerHTML='<div class="drop-icon">✅</div><div class="drop-text"><strong>Card scanned!</strong> ⭐ Auto-tagged yellow for 30 days.</div>';
+      shell.innerHTML=`
+        <div class="form-group"><label class="form-label">Category after 30 days</label>
+          <select class="form-select"><option>🤝 Gold — Networking</option><option>🟢 Green — Work</option></select>
+        </div>
+        ${buildVoiceMemo('scan')}
+        <button class="btn btn-yellow btn-block" style="color:var(--text);margin-top:4px;" onclick="showToast('⭐ Contact saved — yellow for 30 days')">Save Contact</button>`;
+    }, 2200);
+  }
+
+  // ══════════════════════════════════════════
+  // ── HAVEN DATA LAYER (Supabase) ──
+  // Reads are synchronous from an in-memory cache filled at login;
+  // every write updates the cache instantly, then saves to Supabase.
+  // ══════════════════════════════════════════
+  const SB_TABLES = {
+    contacts:     { table: 'contacts',     order: 'added',
+                    cols: { firstName:'first_name', lastName:'last_name', company:'company', email:'email', phone:'phone', cat:'cat', notes:'notes', color:'color', added:'added' } },
+    appointments: { table: 'appointments', order: 'date',
+                    cols: { title:'title', date:'date', time:'time', cat:'cat', notes:'notes', color:'color', created:'created' } },
+    tasks:        { table: 'tasks',        order: 'created',
+                    cols: { title:'title', priority:'priority', due:'due', done:'done', created:'created' } },
+    emailLogs:    { table: 'email_logs',   order: 'date',
+                    cols: { contactId:'contact_id', subject:'subject', direction:'direction', account:'account', notes:'notes', date:'date' } }
+  };
+  const _cache = { contacts: [], appointments: [], tasks: [], emailLogs: [] };
+
+  function toRow(k, item) {
+    const row = {};
+    if (item.id !== undefined) row.id = item.id;
+    Object.entries(SB_TABLES[k].cols).forEach(([js, col]) => {
+      if (item[js] !== undefined) row[col] = item[js] === '' ? null : item[js];
+    });
+    return row;
+  }
+  function fromRow(k, row) {
+    const item = { id: row.id };
+    Object.entries(SB_TABLES[k].cols).forEach(([js, col]) => {
+      const v = row[col];
+      item[js] = (typeof v === 'boolean') ? v : (v == null ? '' : v);
+    });
+    return item;
+  }
+  function _sbWrite(query, what) {
+    Promise.resolve(query).then(({ error }) => {
+      if (error) {
+        console.error('Supabase ' + what + ':', error);
+        showToast('⚠️ Cloud save failed — check your connection');
+      }
+    }).catch(e => {
+      console.error('Supabase ' + what + ':', e);
+      showToast('⚠️ Cloud save failed — check your connection');
+    });
+  }
+
+  async function loadAllData() {
+    const keys = Object.keys(SB_TABLES);
+    const results = await Promise.all(
+      keys.map(k => sb.from(SB_TABLES[k].table).select('*').order(SB_TABLES[k].order, { ascending: true }))
+    );
+    let failed = false;
+    results.forEach((res, i) => {
+      const k = keys[i];
+      if (res.error) { console.error('Supabase load ' + k + ':', res.error); failed = true; _cache[k] = []; }
+      else _cache[k] = (res.data || []).map(r => fromRow(k, r));
+    });
+    if (failed) showToast('⚠️ Some data failed to load — run the setup SQL in Supabase, then refresh');
+  }
+
+  const DB = {
+    get: k => _cache[k] || [],
+    set: (k, v) => {
+      const old = _cache[k] || [];
+      _cache[k] = v;
+      const t = SB_TABLES[k];
+      const keepIds = new Set(v.map(i => i.id));
+      const gone = old.filter(i => !keepIds.has(i.id)).map(i => i.id);
+      if (v.length)    _sbWrite(sb.from(t.table).upsert(v.map(item => toRow(k, item))), 'save ' + k);
+      if (gone.length) _sbWrite(sb.from(t.table).delete().in('id', gone), 'clean ' + k);
+    },
+    add: (k, item) => {
+      _cache[k] = [...(_cache[k] || []), item];
+      _sbWrite(sb.from(SB_TABLES[k].table).insert(toRow(k, item)), 'add ' + k);
+      return item;
+    },
+    addMany: (k, items) => {
+      if (!items.length) return;
+      _cache[k] = [...(_cache[k] || []), ...items];
+      _sbWrite(sb.from(SB_TABLES[k].table).insert(items.map(item => toRow(k, item))), 'add ' + k);
+    },
+    del: (k, id) => {
+      _cache[k] = (_cache[k] || []).filter(i => i.id !== id);
+      _sbWrite(sb.from(SB_TABLES[k].table).delete().eq('id', id), 'delete ' + k);
+    },
+    update: (k, id, patch) => {
+      _cache[k] = (_cache[k] || []).map(i => i.id === id ? { ...i, ...patch } : i);
+      const row = toRow(k, patch);
+      delete row.id;
+      _sbWrite(sb.from(SB_TABLES[k].table).update(row).eq('id', id), 'update ' + k);
+    }
+  };
+
+  const CAT_COLOR = { networking:'var(--gold)', work:'var(--green)', personal:'var(--navy)', urgent:'var(--pink)', new:'var(--gold-bright)' };
+  const CAT_PALE  = { networking:'var(--gold-pale)', work:'var(--green-pale)', personal:'var(--navy-pale)', urgent:'var(--pink-pale)', new:'var(--gold-bright-pale)' };
+  const CAT_TEXT  = { networking:'#7A5C00', work:'var(--green-dark)', personal:'var(--navy-dark)', urgent:'var(--pink-dark)', new:'#7A5C00' };
+  const CAT_LABEL = { networking:'🤝 Networking', work:'🟢 Work', personal:'🔵 Personal', urgent:'🔴 Urgent', new:'⭐ New contact' };
+  const INITIALS  = name => name.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2) || '?';
+  const AVG_COLORS = ['#0277BD','#2D7D46','#B8860B','#E91E8C','#5C6BC0','#00838F','#6A1B9A','#BF360C'];
+  let _colorIdx = 0;
+  const nextColor = () => AVG_COLORS[_colorIdx++ % AVG_COLORS.length];
+
+  // ── SET TODAY'S DATE ON APPOINTMENT FORM ──
+  function initDateFields() {
+    const today = new Date().toISOString().split('T')[0];
+    const apptDate = document.getElementById('apptDate');
+    if (apptDate && !apptDate.value) apptDate.value = today;
+    const taskDue = document.getElementById('taskDue');
+    if (taskDue && !taskDue.value) taskDue.value = today;
+  }
+
+  // ── SAVE APPOINTMENT ──
+  function saveAppointment() {
+    const title = (document.getElementById('apptTitle').value || '').trim();
+    const date  = document.getElementById('apptDate').value;
+    const time  = document.getElementById('apptTime').value;
+    const cat   = document.getElementById('apptCat').value || 'work';
+    const notes = (document.getElementById('apptNotes').value || '').trim();
+
+    if (!title) { showToast('⚠️ Please enter a title'); return; }
+    if (!date)  { showToast('⚠️ Please select a date'); return; }
+
+    DB.add('appointments', {
+      id: 'appt_' + Date.now(), title, date, time, cat, notes,
+      color: CAT_COLOR[cat] || 'var(--sky)',
+      created: new Date().toISOString()
+    });
+
+    closeSheet('newAppt');
+    document.getElementById('apptTitle').value = '';
+    document.getElementById('apptNotes').value = '';
+    buildCalendar();
+    refreshWeekViewIfVisible();
+    updateHomeStats();
+    showToast('✓ Appointment saved to calendar');
+
+    // Jump calendar to the saved date's month
+    const d = new Date(date + 'T00:00:00');
+    calYear = d.getFullYear(); calMonth = d.getMonth();
+    buildCalendar();
+    // Show the day in agenda
+    const weekday = d.toLocaleDateString('en-US',{weekday:'long'});
+    selectDayFromDate(d);
+  }
+
+  function selectDayFromDate(d) {
+    setTimeout(() => {
+      const dayNum = d.getDate();
+      const cells = document.querySelectorAll('.cal-day:not(.other-month)');
+      cells.forEach(cell => {
+        const span = cell.querySelector('.day-num');
+        if (span && parseInt(span.textContent) === dayNum) {
+          cell.classList.add('selected');
+          const label = d.toLocaleDateString('en-US',{weekday:'long'}) + ', ' +
+            d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+          selectDayData(dayNum, label);
+        }
+      });
+    }, 80);
+  }
+
+  function refreshWeekViewIfVisible() {
+    if (calView === 'week') buildWeekView();
+  }
+
+  // ── SAVE CONTACT ──
+  function saveContact() {
+    const firstName = (document.getElementById('cFirstName').value||'').trim();
+    const lastName  = (document.getElementById('cLastName').value||'').trim();
+    const company   = (document.getElementById('cCompany').value||'').trim();
+    const email     = (document.getElementById('cEmail').value||'').trim();
+    const phone     = (document.getElementById('cPhone').value||'').trim();
+    const cat       = document.getElementById('cCat').value || 'networking';
+    const notes     = (document.getElementById('cNotes').value||'').trim();
+
+    if (!firstName && !lastName) { showToast('⚠️ Please enter a name'); return; }
+
+    DB.add('contacts', {
+      id: 'contact_' + Date.now(),
+      firstName, lastName, company, email, phone, cat, notes,
+      color: nextColor(),
+      added: new Date().toISOString()
+    });
+
+    closeSheet('addContact');
+    ['cFirstName','cLastName','cCompany','cEmail','cPhone','cNotes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+    renderContacts();
+    updateHomeStats();
+    showToast('✓ Contact saved');
+  }
+
+  // ── SAVE TASK ──
+  function saveTask() {
+    const title    = (document.getElementById('taskTitle').value||'').trim();
+    const priority = document.getElementById('taskPriority').value || 'urgent';
+    const due      = document.getElementById('taskDue').value;
+
+    if (!title) { showToast('⚠️ Please enter a task'); return; }
+
+    DB.add('tasks', {
+      id: 'task_' + Date.now(), title, priority, due,
+      done: false, created: new Date().toISOString()
+    });
+
+    closeSheet('addTask');
+    document.getElementById('taskTitle').value = '';
+    renderTasks();
+    updateHomeStats();
+    showToast('✓ Task added');
+  }
+
+  function completeTask(el) {
+    const item = el.closest('.task-item');
+    const id   = item.dataset.id;
+    if (id) DB.update('tasks', id, { done: true });
+    el.innerHTML = '✓';
+    el.style.cssText = 'background:var(--green);border-color:var(--green);color:white;';
+    item.style.opacity = '0.45';
+    item.style.textDecoration = 'line-through';
+    showToast('✓ Task completed');
+    setTimeout(() => { renderTasks(); updateHomeStats(); }, 800);
+  }
+
+  // ── RENDER CONTACTS LIST ──
+  function renderContacts() {
+    const contacts = DB.get('contacts');
+    const list = document.getElementById('contactsList');
+    if (!list) return;
+
+    if (!contacts.length) {
+      list.innerHTML = `<div id="contacts-empty-state" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+        <div style="font-size:48px;margin-bottom:14px;">👥</div>
+        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">No contacts yet</div>
+        <div style="font-size:13px;line-height:1.6;margin-bottom:20px;">Scan a business card to add someone you meet,<br>or tap + Add Contact to get started.</div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-yellow btn-sm" style="color:var(--text);" onclick="switchTab('scan')">📷 Scan Card</button>
+          <button class="btn btn-sky btn-sm" style="background:var(--sky);color:white;" onclick="openSheet('addContact')">+ Add Contact</button>
+        </div>
+      </div>`;
+      const sub = document.getElementById('contactsSub');
+      if (sub) sub.textContent = '0 contacts · add your first below';
+      return;
+    }
+
+    const now = Date.now();
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+    // Group by category
+    const groups = { new:[], urgent:[], networking:[], work:[], personal:[] };
+    contacts.forEach(c => {
+      const isNew = (now - new Date(c.added).getTime()) < thirtyDays;
+      const cat = isNew && c.cat !== 'urgent' ? 'new' : c.cat;
+      (groups[cat] || (groups.personal)).push({...c, _displayCat: cat});
+    });
+
+    const sectionOrder = ['new','urgent','networking','work','personal'];
+    const sectionLabels = {
+      new:        '⭐ New — Added in Last 30 Days',
+      urgent:     '🔴 Urgent Follow-Up',
+      networking: '🤝 Networking',
+      work:       '🟢 Work',
+      personal:   '🔵 Personal'
+    };
+    const sectionColors = {
+      new:'#7A5C00', urgent:'var(--pink-dark)',
+      networking:'#7A5C00', work:'var(--green-dark)', personal:'var(--navy-dark)'
+    };
+
+    let html = '';
+    sectionOrder.forEach(sec => {
+      const items = groups[sec];
+      if (!items || !items.length) return;
+      html += `<div class="section-header" style="color:${sectionColors[sec]};">${sectionLabels[sec]}</div>`;
+      items.forEach(c => {
+        const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.company || 'Unknown';
+        const initials = INITIALS(name);
+        const detail = [c.company, c.phone].filter(Boolean).join(' · ') || c.email || 'No details yet';
+        const colorDot = CAT_COLOR[c._displayCat] || 'var(--sky)';
+        const tagClass = `tag-${c._displayCat === 'new' ? 'new' : c.cat}`;
+        const tagLabel = CAT_LABEL[c._displayCat] || CAT_LABEL[c.cat] || '';
+        html += `<div class="contact-row cat-${c._displayCat}" data-cat="${c._displayCat}" data-id="${c.id}" onclick="openContactDetail('${c.id}')">
+          <div class="contact-avatar" style="background:${c.color||colorDot};">${initials}</div>
+          <div class="contact-info">
+            <div class="contact-name">${name}${c._displayCat==='new'?'<span class="new-badge">NEW</span>':''}</div>
+            <div class="contact-detail">${detail}</div>
+          </div>
+          <span class="tag ${tagClass}">${tagLabel}</span>
+        </div>`;
+      });
+    });
+
+    list.innerHTML = html;
+    const sub = document.getElementById('contactsSub');
+    if (sub) sub.textContent = `${contacts.length} contact${contacts.length!==1?'s':''} · tap to view`;
+  }
+
+  function openContactDetail(id) {
+    const c = DB.get('contacts').find(x => x.id === id);
+    if (!c) return;
+    const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.company || 'Contact';
+    const initials = INITIALS(name);
+    const logs = DB.get('emailLogs').filter(l => l.contactId === id)
+      .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    const logsHtml = logs.length ? logs.map(l => `
+      <div class="activity-item">
+        <div class="activity-icon" style="background:${l.direction==='sent'?'#E3F2FD':'var(--green-pale)'};">${l.direction==='sent'?'📤':'📥'}</div>
+        <div>
+          <div class="activity-text"><strong>${l.subject}</strong></div>
+          <div class="activity-time">${new Date(l.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} · ${l.account.split('@')[1]?.split('.')[0]||l.account}</div>
+          ${l.notes?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${l.notes}</div>`:''}
+        </div>
+      </div>`).join('') :
+      '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">No emails logged yet — tap Log Email to add one.</div>';
+
+    document.getElementById('contactDetailName').textContent = name;
+    document.querySelector('#sheet-contactDetail .sheet-body').innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div class="contact-avatar" style="width:56px;height:56px;font-size:18px;background:${c.color||'var(--sky)'};">${initials}</div>
+        <div>
+          <span class="tag tag-${c.cat}" style="margin-bottom:5px;display:inline-block;">${CAT_LABEL[c.cat]||''}</span>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px;">${c.company||''}</div>
+        </div>
+      </div>
+      <div class="quick-actions" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px;">
+        ${c.phone?`<button class="btn btn-outline btn-sm" onclick="window.location='tel:${c.phone}'">📞 Call</button>`:'<button class="btn btn-outline btn-sm" style="opacity:0.4;" disabled>📞 Call</button>'}
+        ${c.email?`<button class="btn btn-outline btn-sm" onclick="window.location='mailto:${c.email}'">✉️ Email</button>`:'<button class="btn btn-outline btn-sm" style="opacity:0.4;" disabled>✉️ Email</button>'}
+        <button class="btn btn-outline btn-sm" onclick="closeSheet('contactDetail');openSheet('newAppt')">📅 Book</button>
+      </div>
+      <div class="card" style="margin-bottom:10px;">
+        <div class="card-title">Details</div>
+        ${c.email?`<div class="scan-field"><b>Email</b>${c.email}</div>`:''}
+        ${c.phone?`<div class="scan-field"><b>Phone</b>${c.phone}</div>`:''}
+        ${c.notes?`<div class="scan-field"><b>Notes</b>${c.notes}</div>`:''}
+        <div class="scan-field"><b>Added</b>${new Date(c.added).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+      </div>
+      <div class="card" style="margin-bottom:10px;">
+        <div class="card-title">Email History
+          <button class="btn btn-sky btn-sm" style="background:var(--sky);color:white;" onclick="logEmail('${c.id}')">+ Log Email</button>
+        </div>
+        ${logsHtml}
+      </div>
+      <button class="btn btn-outline btn-block btn-sm" style="color:var(--pink-dark);border-color:var(--pink-light);" onclick="deleteContact('${c.id}')">Remove Contact</button>`;
+    openSheet('contactDetail');
+  }
+
+  function deleteContact(id) {
+    DB.del('contacts', id);
+    closeSheet('contactDetail');
+    renderContacts();
+    updateHomeStats();
+    showToast('Contact removed');
+  }
+
+  // ── RENDER TASKS (home screen) ──
+  function renderTasks() {
+    const taskCard = document.getElementById('urgentCard');
+    if (!taskCard) return;
+    const tasks = DB.get('tasks').filter(t => !t.done);
+    const now = Date.now();
+
+    const inner = taskCard.querySelector('.card-title');
+    // keep the title, replace everything after it
+    const old = taskCard.innerHTML;
+    const titleEnd = old.indexOf('</div>', old.indexOf('card-title')) + 6;
+    const titleHtml = old.substring(0, titleEnd);
+
+    if (!tasks.length) {
+      taskCard.innerHTML = titleHtml + `<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No urgent tasks — you're all caught up! 🎉<br><span style="color:var(--pink);cursor:pointer;font-weight:500;" onclick="openSheet('addTask')">+ Add a task</span></div>`;
+      return;
+    }
+
+    const rows = tasks.slice(0,5).map(t => {
+      const isUrgent = t.priority === 'urgent';
+      const dueStr = t.due ? new Date(t.due+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      const isOverdue = t.due && new Date(t.due+'T23:59:59') < new Date();
+      return `<div class="task-item ${isUrgent?'urgent':'normal'}" data-id="${t.id}">
+        <div class="task-check" onclick="completeTask(this)"></div>
+        <div class="task-text"><strong>${t.priority==='urgent'?'⚠️ ':''} ${t.title}</strong></div>
+        ${dueStr?`<div class="task-due" style="${isOverdue?'color:var(--pink-dark);':''}">${isOverdue?'⚠️ ':''} ${dueStr}</div>`:''}
+      </div>`;
+    }).join('');
+
+    taskCard.innerHTML = titleHtml + rows;
+  }
+
+  // ── UPDATE HOME STATS ──
+  function updateHomeStats() {
+    const contacts = DB.get('contacts');
+    const tasks    = DB.get('tasks').filter(t=>!t.done);
+    const now      = Date.now();
+    const thirtyD  = 30*24*60*60*1000;
+    const net  = contacts.filter(c=>c.cat==='networking').length;
+    const newP = contacts.filter(c=>(now-new Date(c.added).getTime())<thirtyD).length;
+    const urg  = tasks.filter(t=>t.priority==='urgent').length;
+
+    const statVals = {
+      'Work Contacts': contacts.filter(c=>c.cat==='work').length,
+      'Networking': net,
+      'Urgent Tasks': urg,
+      'New People': newP,
+      'Personal': contacts.filter(c=>c.cat==='personal').length,
+    };
+
+    document.querySelectorAll('.stat-card .stat-val').forEach(el => {
+      const label = el.previousElementSibling?.textContent?.trim();
+      if (label && statVals[label] !== undefined) el.textContent = statVals[label];
+    });
+
+    // Update contacts subtitle
+    const sub = document.getElementById('contactsSub');
+    if (sub && contacts.length) sub.textContent = `${contacts.length} contact${contacts.length!==1?'s':''} · tap to view`;
+  }
+
+  // ── DYNAMIC CALENDAR (reads from localStorage) ──
+  // Override the static buildCalendar/selectDayData with real-data versions
+  let calYear  = new Date().getFullYear();
+  let calMonth = new Date().getMonth();
+
+  function buildCalendar() {
+    const appts = DB.get('appointments');
+    const today = new Date();
+
+    // Build monthEvents from localStorage
+    const evts = {};
+    appts.forEach(a => {
+      const d = new Date(a.date + 'T00:00:00');
+      if (d.getFullYear()===calYear && d.getMonth()===calMonth) {
+        const day = d.getDate();
+        if (!evts[day]) evts[day] = [];
+        evts[day].push({ c: a.color || CAT_COLOR[a.cat] || 'var(--sky)', l: a.title });
+      }
+    });
+
+    // Update header label
+    const label = new Date(calYear, calMonth, 1)
+      .toLocaleDateString('en-US', {month:'long', year:'numeric'});
+    const nav = document.getElementById('calNavLabel');
+    if (nav) nav.textContent = label;
+
+    const container = document.getElementById('calDays');
+    if (!container) return;
+
+    const firstDay    = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+    const prevDays    = new Date(calYear, calMonth, 0).getDate();
+
+    let html = '';
+    // Leading days from previous month
+    for (let i = firstDay-1; i >= 0; i--) {
+      html += `<div class="cal-day other-month"><span class="day-num">${prevDays-i}</span><div class="day-event-bars"></div></div>`;
+    }
+    // Current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday = d===today.getDate() && calMonth===today.getMonth() && calYear===today.getFullYear();
+      const cls = ['cal-day', isToday?'today selected':''].filter(Boolean).join(' ');
+      const dayEvts = (evts[d]||[]).filter(e => {
+        if (calMode==='all') return true;
+        if (calMode==='networking') return e.c===CAT_COLOR.networking||e.c===CAT_COLOR.new;
+        if (calMode==='work')       return e.c===CAT_COLOR.work||e.c===CAT_COLOR.urgent;
+        if (calMode==='personal')   return e.c===CAT_COLOR.personal;
+        return true;
+      });
+      const shown = dayEvts.slice(0,2);
+      const more  = dayEvts.length > 2 ? dayEvts.length-2 : 0;
+      const bars  = shown.map(e=>`<div class="day-event-bar" style="background:${e.c};"></div>`).join('')
+                  + (more ? `<div class="day-more">+${more}</div>` : '');
+      html += `<div class="${cls}" onclick="selectDay(${d},this)"><span class="day-num">${d}</span><div class="day-event-bars">${bars}</div></div>`;
+    }
+    // Trailing days
+    const trailing = 7 - ((firstDay + daysInMonth) % 7 || 7);
+    for (let d = 1; d <= trailing && trailing<7; d++) {
+      html += `<div class="cal-day other-month"><span class="day-num">${d}</span><div class="day-event-bars"></div></div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  function selectDayData(num, label) {
+    const hdr  = document.getElementById('agendaHeader');
+    const list = document.getElementById('agendaList');
+    if (!hdr || !list) return;
+    hdr.textContent = label;
+
+    const appts = DB.get('appointments').filter(a => {
+      const d = new Date(a.date + 'T00:00:00');
+      return d.getFullYear()===calYear && d.getMonth()===calMonth && d.getDate()===num;
+    }).filter(a => {
+      if (calMode==='all') return true;
+      if (calMode==='networking') return a.cat==='networking'||a.cat==='new';
+      if (calMode==='work')       return a.cat==='work'||a.cat==='urgent';
+      if (calMode==='personal')   return a.cat==='personal';
+      return true;
+    });
+
+    if (!appts.length) {
+      list.innerHTML = `<div style="text-align:center;padding:26px;color:var(--text-muted);font-size:13px;background:var(--white);border:1px solid var(--border);border-radius:12px;">
+        No appointments — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet('newAppt')">+ Add one</span>
+      </div>`;
+      return;
+    }
+
+    // Sort by time
+    appts.sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
+    // Group by time for side-by-side display
+    const timeGroups = {};
+    appts.forEach(a => { const t=a.time||'All day'; (timeGroups[t]=timeGroups[t]||[]).push(a); });
+
+    list.innerHTML = Object.entries(timeGroups).map(([time, group]) => {
+      if (group.length > 1) {
+        return `<div class="agenda-sidebyside">
+          <div class="sbs-time">${time}</div>
+          <div class="sbs-events">
+            ${group.map(a => `
+              <div class="sbs-event" style="border-left:4px solid ${a.color||'var(--sky)'};">
+                <div class="sbs-event-title">${a.title}</div>
+                <div class="sbs-event-meta">${a.notes||CAT_LABEL[a.cat]||''}</div>
+                <span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      }
+      const a = group[0];
+      return `<div class="agenda-item">
+        <div class="agenda-stripe" style="background:${a.color||'var(--sky)'};"></div>
+        <div class="agenda-info">
+          <div class="agenda-title">${a.title}</div>
+          <div class="agenda-meta">${a.notes||''}</div>
+          <span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <div class="agenda-time">${a.time||'All day'}</div>
+          <div style="font-size:10px;color:var(--pink-dark);cursor:pointer;" onclick="deleteAppt('${a.id}')">✕ Remove</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function deleteAppt(id) {
+    DB.del('appointments', id);
+    buildCalendar();
+    showToast('Appointment removed');
+    // Refresh current agenda view
+    const hdr = document.getElementById('agendaHeader');
+    if (hdr) {
+      // re-select the currently selected day
+      const sel = document.querySelector('.cal-day.selected:not(.other-month)');
+      if (sel) { const n=parseInt(sel.querySelector('.day-num').textContent); selectDayData(n, hdr.textContent); }
+    }
+  }
+
+  // Override navCal to use dynamic year/month
+  function navCal(dir) {
+    if (calView === 'week') {
+      weekOffset = Math.max(0, Math.min(1, weekOffset + dir));
+      buildWeekView();
+      const lbl = weekOffset===1?'Week of Jun 14–20':'Week of Jun 7–13';
+      const hdr = document.getElementById('agendaHeader');
+      if (hdr) hdr.textContent = lbl + ' — tap a day to see details';
+    } else {
+      calMonth += dir;
+      if (calMonth < 0)  { calMonth = 11; calYear--; }
+      if (calMonth > 11) { calMonth = 0;  calYear++; }
+      buildCalendar();
+      document.getElementById('agendaList').innerHTML =
+        '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Tap a day to see appointments.</div>';
+      document.getElementById('agendaHeader').textContent =
+        new Date(calYear, calMonth, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    }
+  }
+
+  // ── REAL CONTACT IMPORT ──
+  let _pendingImport = []; // contacts parsed from file, waiting for confirm
+
+  function handleRealImport(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const prog  = document.getElementById('importProgress');
+    const bar   = document.getElementById('importProgressBar');
+    const label = document.getElementById('importProgressLabel');
+    const dup   = document.getElementById('dedupPreview');
+    const zone  = document.getElementById('importDropZone');
+
+    zone.innerHTML = `<div class="drop-icon" style="font-size:28px;">⏳</div><div class="drop-text">Reading <strong>${file.name}</strong>…</div>`;
+    prog.classList.add('show');
+    dup.classList.remove('show');
+    _pendingImport = [];
+
+    bar.style.width = '0%';
+    setTimeout(() => { bar.style.width = '40%'; label.textContent = 'Parsing contacts…'; }, 200);
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text = e.target.result;
+      bar.style.width = '70%';
+      label.textContent = 'Checking for duplicates…';
+
+      setTimeout(() => {
+        const isVcf = file.name.toLowerCase().endsWith('.vcf') || file.type.includes('vcard');
+        const parsed = isVcf ? parseVCard(text) : parseCSV(text);
+
+        // Dedup against existing contacts by email
+        const existing = DB.get('contacts');
+        const existEmails = new Set(existing.map(c => (c.email||'').toLowerCase().trim()).filter(Boolean));
+
+        let newC = 0, dupC = 0, skipC = 0;
+        _pendingImport = [];
+        parsed.forEach(c => {
+          if (!c.firstName && !c.lastName && !c.email) { skipC++; return; }
+          if (c.email && existEmails.has(c.email.toLowerCase().trim())) { dupC++; return; }
+          _pendingImport.push(c);
+          newC++;
+        });
+
+        bar.style.width = '100%';
+        label.textContent = `Found ${parsed.length} contacts in file`;
+
+        setTimeout(() => {
+          prog.classList.remove('show');
+          zone.innerHTML = `<div class="drop-icon" style="font-size:28px;">✅</div><div class="drop-text"><strong>${file.name}</strong> — ${parsed.length} contacts found</div>`;
+
+          document.getElementById('importCountNew').textContent   = newC;
+          document.getElementById('importCountDup').textContent   = dupC;
+          document.getElementById('importCountSkip').textContent  = skipC;
+          document.getElementById('importCountTotal').textContent = existing.length + newC;
+          dup.classList.add('show');
+        }, 600);
+      }, 400);
+    };
+    reader.onerror = () => { zone.innerHTML = '<div class="drop-icon" style="font-size:28px;">❌</div><div class="drop-text">Could not read file — try a .vcf or .csv</div>'; prog.classList.remove('show'); };
+    reader.readAsText(file);
+    input.value = ''; // reset so same file can be re-uploaded
+  }
+
+  function parseVCard(text) {
+    const contacts = [];
+    // Split on BEGIN:VCARD (case-insensitive)
+    const cards = text.split(/BEGIN:VCARD/gi).slice(1);
+    cards.forEach(card => {
+      // Unfold continued lines (lines starting with space/tab continue previous)
+      const unfolded = card.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+      const get = key => {
+        const m = unfolded.match(new RegExp('^' + key + '[^:]*:(.+)$', 'mi'));
+        return (m ? m[1] : '').replace(/\r/g,'').trim();
+      };
+      // Full name
+      let fn = get('FN');
+      // Structured name fallback: N:Last;First;Middle;Prefix;Suffix
+      if (!fn) {
+        const n = get('N').split(';');
+        fn = [n[1], n[0]].filter(Boolean).join(' ').trim();
+      }
+      const parts = fn.split(' ');
+      const firstName = parts[0] || '';
+      const lastName  = parts.slice(1).join(' ') || '';
+      // Email — take first match
+      const emailM = unfolded.match(/^EMAIL[^:]*:(.+)$/mi);
+      const email  = emailM ? emailM[1].replace(/\r/g,'').trim() : '';
+      // Phone — take first match
+      const telM  = unfolded.match(/^TEL[^:]*:(.+)$/mi);
+      const phone = telM ? telM[1].replace(/\r/g,'').trim() : '';
+      // Org
+      const org = get('ORG').replace(/;/g,' ').trim();
+      // Note
+      const note = get('NOTE');
+
+      if (fn || email) {
+        contacts.push({
+          id: 'import_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+          firstName, lastName,
+          company: org,
+          email, phone,
+          notes: note,
+          cat: 'new',
+          color: nextColor(),
+          added: new Date().toISOString()
+        });
+      }
+    });
+    return contacts;
+  }
+
+  function parseCSV(text) {
+    // Handle \r\n and \n
+    const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim());
+    if (lines.length < 2) return [];
+
+    // Parse a CSV line handling quoted fields
+    const parseLine = line => {
+      const fields = []; let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { fields.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      fields.push(cur.trim());
+      return fields;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim());
+    const idx = k => headers.findIndex(h => k.some(s => h.includes(s)));
+
+    const fi = { // column finders
+      firstName: idx(['first name','given name','firstname']),
+      lastName:  idx(['last name','family name','surname','lastname']),
+      fullName:  idx(['name','display name','full name']),
+      email:     idx(['email','e-mail','mail']),
+      phone:     idx(['phone','mobile','cell','telephone','tel']),
+      company:   idx(['company','organization','employer','business']),
+      notes:     idx(['note','notes','comment']),
+    };
+
+    return lines.slice(1).map(line => {
+      const v = parseLine(line);
+      const g = i => (i >= 0 && i < v.length ? v[i] : '').replace(/^"|"$/g,'').trim();
+
+      let firstName = g(fi.firstName);
+      let lastName  = g(fi.lastName);
+      if (!firstName && !lastName && fi.fullName >= 0) {
+        const parts = g(fi.fullName).split(' ');
+        firstName = parts[0]; lastName = parts.slice(1).join(' ');
+      }
+      const email   = g(fi.email);
+      const phone   = g(fi.phone);
+      const company = g(fi.company);
+      const notes   = g(fi.notes);
+
+      return {
+        id: 'import_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        firstName, lastName, company, email, phone, notes,
+        cat: 'new', color: nextColor(),
+        added: new Date().toISOString()
+      };
+    }).filter(c => c.firstName || c.lastName || c.email);
+  }
+
+  function confirmImport() {
+    if (!_pendingImport.length) { showToast('Nothing to import'); return; }
+    DB.addMany('contacts', _pendingImport);
+    const n = _pendingImport.length;
+    _pendingImport = [];
+    document.getElementById('dedupPreview').classList.remove('show');
+    document.getElementById('importDropZone').innerHTML =
+      `<div class="drop-icon" style="font-size:28px;">🎉</div><div class="drop-text"><strong>${n} contact${n!==1?'s':''} imported!</strong><br>All tagged ⭐ yellow for 30 days.</div>`;
+    renderContacts();
+    updateHomeStats();
+    showToast(`✓ ${n} contact${n!==1?'s':''} imported successfully`);
+  }
+
+  function cancelImport() {
+    _pendingImport = [];
+    document.getElementById('dedupPreview').classList.remove('show');
+    document.getElementById('importDropZone').innerHTML =
+      '<div class="drop-icon" style="font-size:28px;">📂</div><div class="drop-text"><strong>Tap to choose your file</strong><br>.vcf (vCard) or .csv</div>';
+  }
+
+  // Expose simulateImport as no-op (old references cleaned up)
+  function simulateImport() { document.getElementById('realImportInput')?.click(); }
+
+  // ── EMAIL HELP & LOG EMAIL ──
+  const emailHelpMessages = {
+    haven:    'robin@enjoyyourhaven.com is registered. To sync email automatically, this app needs a web server with OAuth credentials registered with Google. For now, use Import Contacts to load contacts from a .vcf file.',
+    acorn:    'robin@enjoyyouracorn.com is registered. Auto-sync needs a server. Export contacts from Google Contacts as .vcf and use Import Contacts.',
+    hpdallas: 'robin@hpdallas.com is registered. Auto-sync needs a server with Microsoft OAuth. Export contacts from Outlook as .csv and use Import Contacts.',
+    scoutre:  'robin@scoutre.net is registered. Auto-sync needs a server. Export contacts from your email provider and use Import Contacts.',
+    frazier:  'maintenance@frazier-renovations.com is registered. Auto-sync needs a server. Maintenance requests can be logged manually in the CRM.',
+    new:      'To add a new email account to sync automatically, this app needs to be hosted on a server with OAuth credentials. For now, contacts from any account can be imported using a .vcf or .csv file.',
+    sync:     'Automatic email sync — pulling emails from Gmail, Outlook, and iCloud — requires a backend server with registered OAuth credentials from each provider. This is a proper development project. What works right now: (1) Import contacts from a file, (2) Log email conversations manually on each contact, (3) Use the BCC tip: BCC crm@havens.app on emails you want to track.'
+  };
+
+  function showEmailHelp(key) {
+    const msg = emailHelpMessages[key] || 'Email sync requires a server setup.';
+    // Show in a simple alert-style toast extended
+    const existing = document.getElementById('emailHelpBanner');
+    if (existing) existing.remove();
+    const banner = document.createElement('div');
+    banner.id = 'emailHelpBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;';
+    banner.innerHTML = `<div style="background:white;border-radius:16px;padding:22px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--navy-dark);margin-bottom:12px;">📧 About Email Sync</div>
+      <div style="font-size:13px;color:var(--slate);line-height:1.7;margin-bottom:16px;">${msg}</div>
+      <div style="background:var(--green-pale);border:1px solid #a5d6a7;border-radius:10px;padding:12px 14px;font-size:12px;color:var(--green-dark);margin-bottom:16px;line-height:1.6;">
+        <strong>✓ What works right now:</strong><br>
+        • <strong>Import contacts</strong> from any provider using a .vcf or .csv file<br>
+        • <strong>Log email conversations</strong> manually on each contact record<br>
+        • <strong>Add appointments</strong> manually — they save to your calendar
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('emailHelpBanner').remove()">Close</button>
+        <button class="btn btn-sky btn-sm" style="background:var(--sky);color:white;" onclick="document.getElementById('emailHelpBanner').remove();openSheet('settings')">Go to Import →</button>
+      </div>
+    </div>`;
+    banner.onclick = e => { if (e.target === banner) banner.remove(); };
+    document.body.appendChild(banner);
+  }
+
+  // ── LOG EMAIL ON CONTACT ──
+  function logEmail(contactId) {
+    const existing = document.getElementById('logEmailModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'logEmailModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;display:flex;align-items:flex-end;justify-content:center;';
+    modal.innerHTML = `<div style="background:white;border-radius:20px 20px 0 0;width:100%;max-width:600px;padding:20px 20px calc(var(--safe-bottom,0px) + 20px);max-height:85vh;overflow-y:auto;">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--navy-dark);margin-bottom:14px;">📧 Log Email Conversation</div>
+      <div class="form-group"><label class="form-label">Subject / Summary</label><input class="form-input" id="logSubject" placeholder="e.g. Lease renewal follow-up"></div>
+      <div class="form-group"><label class="form-label">Direction</label>
+        <select class="form-select" id="logDirection"><option value="sent">📤 Sent by me</option><option value="received">📥 Received from contact</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Account Used</label>
+        <select class="form-select" id="logAccount">
+          <option>robin@enjoyyourhaven.com</option>
+          <option>robin@hpdallas.com</option>
+          <option>robin@scoutre.net</option>
+          <option>robin@enjoyyouracorn.com</option>
+          <option>maintenance@frazier-renovations.com</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="logNotes" placeholder="Key points from the email…" style="min-height:70px;"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+        <button class="btn btn-outline" onclick="document.getElementById('logEmailModal').remove()">Cancel</button>
+        <button class="btn btn-sky" style="background:var(--sky);color:white;" onclick="saveEmailLog('${contactId}')">Save Log</button>
+      </div>
+    </div>`;
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    document.body.appendChild(modal);
+  }
+
+  function saveEmailLog(contactId) {
+    const subject   = document.getElementById('logSubject')?.value.trim();
+    const direction = document.getElementById('logDirection')?.value;
+    const account   = document.getElementById('logAccount')?.value;
+    const notes     = document.getElementById('logNotes')?.value.trim();
+    if (!subject) { showToast('⚠️ Please enter a subject'); return; }
+    DB.add('emailLogs', {
+      id: 'log_' + Date.now(), contactId, subject, direction, account, notes,
+      date: new Date().toISOString()
+    });
+    document.getElementById('logEmailModal')?.remove();
+    showToast('✓ Email logged');
+    // Refresh contact detail if open
+    if (contactId) openContactDetail(contactId);
+  }
+
+  // ── LOGIN / LOGOUT ──
+  async function handleLogin() {
+    const email    = (document.getElementById('loginEmail').value || '').trim();
+    const password = document.getElementById('loginPassword').value || '';
+    const errEl    = document.getElementById('loginError');
+    const btn      = document.getElementById('loginBtn');
+    errEl.classList.remove('show');
+    if (!email || !password) {
+      errEl.textContent = 'Please enter your email and password.';
+      errEl.classList.add('show');
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      errEl.textContent = /invalid/i.test(error.message || '')
+        ? 'Email or password is incorrect. Please try again.'
+        : 'Could not sign in — ' + (error.message || 'check your connection.');
+      errEl.classList.add('show');
+      btn.disabled = false; btn.textContent = 'Sign In';
+      return;
+    }
+    await startApp();
+  }
+
+  async function handleLogout() {
+    try { await sb.auth.signOut(); } catch (e) {}
+    location.reload();
+  }
+
+  // ── INIT (runs only after sign-in) ──
+  let _appStarted = false;
+  async function startApp() {
+    if (_appStarted) return;
+    _appStarted = true;
+    await loadAllData();
+    const login = document.getElementById('loginScreen');
+    if (login) login.style.display = 'none';
+    const { data: { user } } = await sb.auth.getUser();
+    const acctEl = document.getElementById('accountEmail');
+    if (acctEl && user) acctEl.textContent = user.email;
+    initApp();
+  }
+
+  function initApp() {
+    buildCalendar();
+    // Show today's date label
+    const _today = new Date();
+    document.getElementById('agendaHeader').textContent =
+      _today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    selectDayData(_today.getDate(), document.getElementById('agendaHeader').textContent);
+    setMode('work', document.querySelector('.mode-btn.active-work'));
+    filterEvents('all', null, false);
+    renderContacts();
+    renderTasks();
+    updateHomeStats();
+    initDateFields();
+    // Init manual entry voice memo
+    const manualVmEl = document.getElementById('vm-manual-container');
+    if (manualVmEl) manualVmEl.innerHTML = buildVoiceMemo('manual');
+    // Re-run initDateFields when appointment sheet opens
+    document.getElementById('sheet-newAppt').addEventListener('click', initDateFields, {once:false});
+  }
+
+  // ── AUTH BOOTSTRAP ──
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await startApp();
+    // else: login screen stays visible
+  })();
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT' && _appStarted) location.reload();
+  });
+</script>
+</body>
+</html>
