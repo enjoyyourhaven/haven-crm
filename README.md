@@ -1,14 +1,20 @@
 # Haven CRM
 
 Mobile CRM for Haven Property Services — contacts, calendar, tasks, and email logs.
-One file (`index.html`), backed by Supabase (project `sstipdekzaywxxcdrjks`).
+One file (`index.html`), backed by Supabase.
+
+The CRM **shares the `havens-honey-dos` Supabase project** (`sstipdekzaywxxcdrjks`)
+with the Haven's Honey Do app. Because of that:
+- the CRM's task table is `crm_tasks` (Honey Do owns `tasks`), and
+- CRM tables are locked to Robin's emails only — Honey Do client/tech logins
+  can never read CRM data.
 
 ## One-time setup
 
-1. **Run the SQL** — Supabase Dashboard → SQL Editor → paste `supabase-crm-setup.sql` → Run.
-   (Safe to run twice.)
-2. **Create your login** — Supabase Dashboard → Authentication → Users → Add user →
-   enter your email and a password, check **Auto Confirm User** → Create.
+1. **Run the SQL** — havens-honey-dos project → SQL Editor → paste
+   `supabase-crm-setup.sql` → Run. (Safe to run twice.)
+2. **Create your login** — same project → Authentication → Users → Add user →
+   one of the allowlisted emails + a password, check **Auto Confirm User** → Create.
 3. Open the app and sign in with that email and password.
 
 ## Where it runs

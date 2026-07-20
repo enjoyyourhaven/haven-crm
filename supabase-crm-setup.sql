@@ -1,14 +1,20 @@
 -- ═══════════════════════════════════════════════════════════════
--- Haven CRM — Supabase setup
--- Project: sstipdekzaywxxcdrjks (Haven CRM)
+-- Haven CRM — setup for the SHARED havens-honey-dos project
 -- Safe to re-run: uses IF NOT EXISTS / DROP POLICY IF EXISTS.
 --
--- HOW TO RUN: Supabase Dashboard → SQL Editor → paste this → Run.
--- Then: Dashboard → Authentication → Users → Add user
---   (email + password, check "Auto Confirm User") to create your login.
+-- The CRM shares this database with the Haven's Honey Do app, so:
+--   • The CRM's task table is named crm_tasks (Honey Do owns "tasks").
+--   • CRM tables only answer to Robin's emails (allowlist below) —
+--     client/tech logins for Honey Do can never see CRM data.
+--   • This script also REMOVES the accidental "Signed-in full access"
+--     rule that an earlier run left on Honey Do's own tasks table.
+--
+-- HOW TO RUN: havens-honey-dos project → SQL Editor → paste → Run.
+-- Then: Authentication → Users → Add user (one of the allowlist
+-- emails + a password, check "Auto Confirm User") to create the login.
 -- ═══════════════════════════════════════════════════════════════
 
--- ── CONTACTS ──
+-- ── CRM TABLES ──
 create table if not exists public.contacts (
   id         text primary key,
   first_name text,
@@ -22,7 +28,6 @@ create table if not exists public.contacts (
   added      timestamptz default now()
 );
 
--- ── APPOINTMENTS ──
 create table if not exists public.appointments (
   id      text primary key,
   title   text not null,
@@ -34,8 +39,7 @@ create table if not exists public.appointments (
   created timestamptz default now()
 );
 
--- ── TASKS ──
-create table if not exists public.tasks (
+create table if not exists public.crm_tasks (
   id       text primary key,
   title    text not null,
   priority text default 'urgent',
@@ -44,7 +48,6 @@ create table if not exists public.tasks (
   created  timestamptz default now()
 );
 
--- ── EMAIL LOGS ──
 create table if not exists public.email_logs (
   id         text primary key,
   contact_id text,
@@ -56,25 +59,39 @@ create table if not exists public.email_logs (
 );
 
 -- ── ROW LEVEL SECURITY ──
--- RLS on + policies for signed-in users only. Anyone holding just the
--- public anon key (no login) gets nothing.
 alter table public.contacts     enable row level security;
 alter table public.appointments enable row level security;
-alter table public.tasks        enable row level security;
+alter table public.crm_tasks    enable row level security;
 alter table public.email_logs   enable row level security;
 
+-- Remove the old too-open rules from the earlier run (wherever they landed)
 drop policy if exists "Signed-in full access" on public.contacts;
-create policy "Signed-in full access" on public.contacts
-  for all to authenticated using (true) with check (true);
-
 drop policy if exists "Signed-in full access" on public.appointments;
-create policy "Signed-in full access" on public.appointments
-  for all to authenticated using (true) with check (true);
-
-drop policy if exists "Signed-in full access" on public.tasks;
-create policy "Signed-in full access" on public.tasks
-  for all to authenticated using (true) with check (true);
-
 drop policy if exists "Signed-in full access" on public.email_logs;
-create policy "Signed-in full access" on public.email_logs
-  for all to authenticated using (true) with check (true);
+drop policy if exists "Signed-in full access" on public.tasks;      -- Honey Do's table: accidental rule OFF
+drop policy if exists "Signed-in full access" on public.crm_tasks;
+
+-- CRM access = Robin's emails only
+drop policy if exists "CRM owner access" on public.contacts;
+create policy "CRM owner access" on public.contacts
+  for all to authenticated
+  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
+  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
+
+drop policy if exists "CRM owner access" on public.appointments;
+create policy "CRM owner access" on public.appointments
+  for all to authenticated
+  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
+  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
+
+drop policy if exists "CRM owner access" on public.crm_tasks;
+create policy "CRM owner access" on public.crm_tasks
+  for all to authenticated
+  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
+  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
+
+drop policy if exists "CRM owner access" on public.email_logs;
+create policy "CRM owner access" on public.email_logs
+  for all to authenticated
+  using ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'))
+  with check ((auth.jwt() ->> 'email') in ('robin@enjoyyourhaven.com','robin@hpdallas.com','robin@scoutre.net','robin@enjoyyouracorn.com'));
