@@ -963,7 +963,7 @@
   </div>
 
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-    <div style="font-size:14px;font-weight:600;color:var(--text);" id="agendaHeader">Friday, June 12</div>
+    <div style="font-size:14px;font-weight:600;color:var(--text);" id="agendaHeader">Today</div>
     <button class="btn btn-outline btn-sm" onclick="openSheet('newAppt')">+ Add</button>
   </div>
   <div id="agendaList"></div>
@@ -992,13 +992,13 @@
   <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
     <div style="font-size:48px;margin-bottom:14px;">📭</div>
     <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">Inbox is empty</div>
-    <div style="font-size:13px;line-height:1.6;">Your emails from all 5 accounts will appear here<br>after the first sync. Next sync runs at 6:00 AM.</div>
+    <div style="font-size:13px;line-height:1.6;">Email sync isn't connected yet.<br>Log emails on each contact's page instead — they show up in Email History.</div>
     <div style="margin-top:14px;"><button class="btn btn-outline btn-sm" onclick="innerTab('import',document.querySelector('.inner-tab:nth-child(2)'));openSheet('settings')">Import Contacts from file →</button></div>
   </div>
 
   <div class="card" style="margin-top:14px;">
-    <div class="card-title">Connected Accounts
-      <span style="font-size:11px;font-weight:400;color:var(--text-muted);">5 accounts</span>
+    <div class="card-title">Email Accounts
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);">manual logging for now</span>
     </div>
     <!-- Haven -->
     <div class="email-account">
@@ -1007,7 +1007,7 @@
         <div class="email-account-name">robin@enjoyyourhaven.com</div>
         <div class="email-account-addr">Haven Property Services · <span style="color:var(--gold);font-weight:600;">📨 Invite sending ON</span></div>
       </div>
-      <div class="status-connected">✓</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:500;">Manual</div>
     </div>
     <!-- Acorn -->
     <div class="email-account">
@@ -1016,7 +1016,7 @@
         <div class="email-account-name">robin@enjoyyouracorn.com</div>
         <div class="email-account-addr">Acorn · Inbox sync only</div>
       </div>
-      <div class="status-connected">✓</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:500;">Manual</div>
     </div>
     <!-- HP Dallas -->
     <div class="email-account">
@@ -1025,7 +1025,7 @@
         <div class="email-account-name">robin@hpdallas.com</div>
         <div class="email-account-addr">HP Dallas · <span style="color:var(--gold);font-weight:600;">📨 Invite sending ON</span></div>
       </div>
-      <div class="status-connected">✓</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:500;">Manual</div>
     </div>
     <!-- Scoutre -->
     <div class="email-account">
@@ -1034,7 +1034,7 @@
         <div class="email-account-name">robin@scoutre.net</div>
         <div class="email-account-addr">Scoutre · <span style="color:var(--gold);font-weight:600;">📨 Invite sending ON</span></div>
       </div>
-      <div class="status-connected">✓</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:500;">Manual</div>
     </div>
     <!-- Frazier Renovations -->
     <div class="email-account">
@@ -1043,7 +1043,7 @@
         <div class="email-account-name">maintenance@frazier-renovations.com</div>
         <div class="email-account-addr">Frazier Renovations · Inbox sync only</div>
       </div>
-      <div class="status-connected">✓</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:500;">Manual</div>
     </div>
     <button class="btn btn-outline btn-block btn-sm" style="margin-top:8px;" onclick="showToast('Account settings — tap RF avatar → Email Setup')">Manage Accounts</button>
   </div>
@@ -1370,7 +1370,7 @@
 <div class="sheet-backdrop" id="sheet-newAppt">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-header"><div class="sheet-title">Add Appointment</div><button class="sheet-close" onclick="closeSheet('newAppt')">✕</button></div>
+    <div class="sheet-header"><div class="sheet-title" id="apptSheetTitle">Add Appointment</div><button class="sheet-close" onclick="closeSheet('newAppt')">✕</button></div>
     <div class="sheet-body">
       <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="apptTitle" placeholder="e.g. Property showing — Oak Lawn"></div>
       <div class="form-2col">
@@ -1403,7 +1403,8 @@
           </div>
         </div>
       </div>
-      <button class="btn btn-green btn-block" onclick="saveAppointment()">✓ Add to Calendar</button>
+      <button class="btn btn-green btn-block" id="apptSaveBtn" onclick="saveAppointment()">✓ Add to Calendar</button>
+      <button class="btn btn-outline btn-block btn-sm" id="apptDeleteBtn" style="display:none;color:var(--pink-dark);border-color:var(--pink-light);margin-top:8px;" onclick="deleteApptFromSheet()">Delete Appointment</button>
     </div>
   </div>
 </div>
@@ -1412,7 +1413,7 @@
 <div class="sheet-backdrop" id="sheet-addTask">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-header"><div class="sheet-title">Add Task</div><button class="sheet-close" onclick="closeSheet('addTask')">✕</button></div>
+    <div class="sheet-header"><div class="sheet-title" id="taskSheetTitle">Add Task</div><button class="sheet-close" onclick="closeSheet('addTask')">✕</button></div>
     <div class="sheet-body">
       <div class="form-group"><label class="form-label">Task</label><input class="form-input" id="taskTitle" placeholder="e.g. Follow up with client re: lease renewal"></div>
       <div class="form-group"><label class="form-label">Priority</label>
@@ -1424,7 +1425,8 @@
         </select>
       </div>
       <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" type="date" id="taskDue"></div>
-      <button class="btn btn-pink btn-block" onclick="saveTask()">Add Task</button>
+      <button class="btn btn-pink btn-block" id="taskSaveBtn" onclick="saveTask()">Add Task</button>
+      <button class="btn btn-outline btn-block btn-sm" id="taskDeleteBtn" style="display:none;color:var(--pink-dark);border-color:var(--pink-light);margin-top:8px;" onclick="deleteTaskFromSheet()">Delete Task</button>
     </div>
   </div>
 </div>
@@ -1433,7 +1435,7 @@
 <div class="sheet-backdrop" id="sheet-addContact">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-header"><div class="sheet-title">Add Contact</div><button class="sheet-close" onclick="closeSheet('addContact')">✕</button></div>
+    <div class="sheet-header"><div class="sheet-title" id="contactSheetTitle">Add Contact</div><button class="sheet-close" onclick="closeSheet('addContact')">✕</button></div>
     <div class="sheet-body">
       <div class="form-2col">
         <div class="form-group"><label class="form-label">First Name</label><input class="form-input" id="cFirstName" placeholder="First"></div>
@@ -1453,7 +1455,7 @@
         </select>
       </div>
       <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="cNotes" placeholder="Where you met, context…"></textarea></div>
-      <button class="btn btn-sky btn-block" style="background:var(--sky);color:white;" onclick="saveContact()">Save Contact</button>
+      <button class="btn btn-sky btn-block" id="contactSaveBtn" style="background:var(--sky);color:white;" onclick="saveContact()">Save Contact</button>
     </div>
   </div>
 </div>
@@ -1869,16 +1871,8 @@
       qa.innerHTML = `<button class="btn btn-yellow" onclick="switchTab('scan')" style="color:var(--text);">⭐ Scan Card</button><button class="btn btn-gold" onclick="openSheet('newEvent')">🤝 New Event</button>`;
     }
 
-    // today schedule
-    const sched = document.getElementById('todaySchedule');
-    if (mode === 'personal') {
-      sched.innerHTML = `<div class="agenda-item" style="border:none;padding:10px 0;margin:0;">
-        <div class="agenda-stripe" style="background:var(--navy);"></div>
-        <div class="agenda-info"><div class="agenda-title">Mom's Birthday Dinner</div><div class="agenda-meta">Lucia's Restaurant</div><span class="agenda-contact" style="background:var(--navy-pale);color:var(--navy-dark);">🔵 Personal</span></div>
-        <div class="agenda-time">7:00 PM</div></div>`;
-    } else {
-      sched.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet(\'newAppt\')">+ Add one</span></div>';
-    }
+    // today schedule — always real data
+    renderTodaySchedule();
 
     fab.className = 'fab' + (mode === 'personal' ? '' : '');
     fab.style.background = 'var(--sky)';
@@ -1887,7 +1881,7 @@
     // events
     filterEvents('all', null, false);
     buildCalendar();
-    selectDayData(12, 'Friday, June 12');
+    selectTodayAgenda();
   }
 
   // ── EVENTS FILTER ──
@@ -1910,7 +1904,7 @@
     btn.className = 'seg-btn ' + cls;
     if (calView === 'week') buildWeekView();
     else buildCalendar();
-    selectDayData(12, 'Friday, June 12');
+    selectTodayAgenda();
   }
 
   // ── CAL VIEW TOGGLE ──
@@ -1924,26 +1918,14 @@
     if (view === 'week') {
       weekOffset = 0;
       buildWeekView();
-      document.getElementById('agendaHeader').textContent = 'Week of Jun 7–13 — tap a day';
-      selectDayData(12, 'Friday, June 12');
+      selectTodayAgenda();
     } else {
       buildCalendar();
-      selectDayData(12, 'Friday, June 12');
+      selectTodayAgenda();
     }
   }
 
-  function navCal(dir) {
-    if (calView === 'week') {
-      weekOffset = Math.max(0, Math.min(1, weekOffset + dir));
-      buildWeekView();
-      const lbl = weekOffset === 1 ? 'Week of Jun 14–20' : 'Week of Jun 7–13';
-      document.getElementById('agendaHeader').textContent = lbl + ' — tap a day to see details';
-      if (weekOffset === 1) selectDayData(20, 'Friday, June 20');
-      else selectDayData(12, 'Friday, June 12');
-    } else {
-      showToast(dir > 0 ? 'Next: July 2026' : 'Prev: May 2026');
-    }
-  }
+  // (navCal is defined further down, where it works from real dates)
 
   // ── TAB NAV ──
   function switchTab(name, el) {
@@ -1969,8 +1951,16 @@
 
   // ── SHEETS ──
   function openSheet(n)  { document.getElementById('sheet-' + n).classList.add('open'); }
-  function closeSheet(n) { document.getElementById('sheet-' + n).classList.remove('open'); }
-  document.querySelectorAll('.sheet-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); }));
+  function closeSheet(n) { document.getElementById('sheet-' + n).classList.remove('open'); _sheetClosed(n); }
+  document.querySelectorAll('.sheet-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) { b.classList.remove('open'); _sheetClosed(b.id.replace('sheet-','')); } }));
+
+  // Reset add/edit sheets whenever they close, so an abandoned edit
+  // can never leak into the next "+ Add".
+  function _sheetClosed(n) {
+    if (n === 'newAppt')    resetApptSheet();
+    if (n === 'addTask')    resetTaskSheet();
+    if (n === 'addContact') resetContactSheet();
+  }
 
   // ── TOAST ──
   function showToast(msg) {
@@ -2067,7 +2057,7 @@
     list.innerHTML = Object.entries(timeGroups).map(([time, group]) => {
       if (group.length > 1) {
         return `<div class="agenda-sidebyside">
-          <div class="sbs-time">${time}</div>
+          <div class="sbs-time">${time==='All day'?time:fmtTime(time)}</div>
           <div class="sbs-events">
             ${group.map(i => `
               <div class="sbs-event${i.urgent ? ' urgent-item' : ''}" style="border-left:4px solid ${i.c};">
@@ -2092,10 +2082,7 @@
   }
 
   // ── WEEK VIEW with side-by-side collision detection ──
-  const weekAppts   = { 7:[],8:[],9:[],10:[],11:[],12:[],13:[] };
-  const weekAppts20 = { 14:[],15:[],16:[],17:[],18:[],19:[],20:[] };
-
-  let weekOffset = 0;
+  let weekOffset = 0; // 0 = this week, ±1 per arrow tap
 
   function resolveOverlaps(appts) {
     const sorted = appts.map((a,i) => ({...a, _i:i}))
@@ -2120,19 +2107,25 @@
   }
 
   function buildWeekView() {
-    const isW2   = weekOffset === 1;
     const days   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-    const dates  = isW2 ? [14,15,16,17,18,19,20] : [7,8,9,10,11,12,13];
-    const todayD = isW2 ? null : 12;
-    const data   = isW2 ? weekAppts20 : weekAppts;
     const startH = 7, endH = 21, hourH = 56;
 
-    document.getElementById('calNavLabel').textContent = isW2 ? 'Week of Jun 14–20' : 'Week of Jun 7–13';
+    // Real week: Sunday of the current week, shifted by weekOffset
+    const now   = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + weekOffset * 7);
+    const end   = new Date(start); end.setDate(start.getDate() + 6);
+    const todayIso = localISO(now);
+    const dayDates = Array.from({length: 7}, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
+
+    document.getElementById('calNavLabel').textContent =
+      'Week of ' + start.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+
+    const appts = DB.get('appointments');
 
     let h = `<div class="week-header-row"><div class="week-time-gutter" style="background:var(--sky);"></div>`;
-    dates.forEach((d, i) => {
-      const tod = d === todayD;
-      h += `<div class="week-day-hdr${tod ? ' w-today' : ''}" style="background:var(--sky);"><div class="week-day-hdr-label">${days[i]}</div><div class="week-day-hdr-num">${d}</div></div>`;
+    dayDates.forEach((d, i) => {
+      const tod = localISO(d) === todayIso;
+      h += `<div class="week-day-hdr${tod ? ' w-today' : ''}" style="background:var(--sky);cursor:pointer;" onclick="selectWeekDay('${localISO(d)}')"><div class="week-day-hdr-label">${days[i]}</div><div class="week-day-hdr-num">${d.getDate()}</div></div>`;
     });
     h += '</div>';
 
@@ -2144,16 +2137,21 @@
     times += '</div>';
 
     let cols = '<div class="week-days-grid">';
-    dates.forEach(d => {
-      cols += `<div class="week-day-col${d === todayD ? ' w-today' : ''}">`;
+    dayDates.forEach(d => {
+      const iso = localISO(d);
+      cols += `<div class="week-day-col${iso === todayIso ? ' w-today' : ''}">`;
       for (let hr = startH; hr < endH; hr++) cols += '<div class="week-hour-cell"></div>';
 
-      const raw = (data[d] || []).filter(a => {
+      const raw = appts.filter(a => a.date === iso).filter(a => {
         if (calMode === 'all')        return true;
-        if (calMode === 'networking') return a.cat === 'networking';
-        if (calMode === 'work')       return a.cat === 'work';
+        if (calMode === 'networking') return a.cat === 'networking' || a.cat === 'new';
+        if (calMode === 'work')       return a.cat === 'work' || a.cat === 'urgent';
         if (calMode === 'personal')   return a.cat === 'personal';
         return true;
+      }).map(a => {
+        const parts = (a.time || '').split(':').map(Number);
+        return { id: a.id, h: isNaN(parts[0]) ? 9 : parts[0], m: isNaN(parts[1]) ? 0 : parts[1], dur: 60,
+                 title: a.title, cat: a.cat, color: a.color || CAT_COLOR[a.cat] || 'var(--sky)' };
       });
 
       resolveOverlaps(raw).forEach(a => {
@@ -2164,7 +2162,7 @@
         const left   = `calc(${pct * a.col}% + 2px)`;
         const width  = `calc(${pct}% - 4px)`;
         const short  = a.title.length > 13 ? a.title.slice(0,12) + '…' : a.title;
-        cols += `<div class="week-appt-block" style="top:${top}px;height:${height}px;left:${left};width:${width};background:${a.color};" onclick="showToast('${a.title}')" title="${a.title}">${short}</div>`;
+        cols += `<div class="week-appt-block" style="top:${top}px;height:${height}px;left:${left};width:${width};background:${a.color};" onclick="editAppt('${a.id}')" title="${a.title}">${short}</div>`;
       });
       cols += '</div>';
     });
@@ -2172,6 +2170,13 @@
 
     document.getElementById('weekInner').innerHTML = h + `<div class="week-body">${times}${cols}</div>`;
     setTimeout(() => { const b = document.querySelector('.week-body'); if (b) b.scrollTop = 2 * hourH; }, 50);
+  }
+
+  // Tap a day header in week view → show that day's agenda
+  function selectWeekDay(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    calYear = d.getFullYear(); calMonth = d.getMonth();
+    selectDayData(d.getDate(), d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}));
   }
 
   // ── BUSINESS HOURS SCHEDULER ──
@@ -2450,16 +2455,66 @@
   let _colorIdx = 0;
   const nextColor = () => AVG_COLORS[_colorIdx++ % AVG_COLORS.length];
 
+  // ── DATE/TIME HELPERS ──
+  // Local date as YYYY-MM-DD (toISOString would flip to tomorrow after ~7 PM Dallas time)
+  function localISO(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function fmtTime(t) {
+    if (!t) return 'All day';
+    const [h, m] = t.split(':').map(Number);
+    if (isNaN(h)) return t;
+    return (h % 12 || 12) + ':' + String(m || 0).padStart(2,'0') + ' ' + (h >= 12 ? 'PM' : 'AM');
+  }
+
+  // ── TODAY'S SCHEDULE (home screen, real data) ──
+  function renderTodaySchedule() {
+    const sched = document.getElementById('todaySchedule');
+    if (!sched) return;
+    const iso = localISO(new Date());
+    let appts = DB.get('appointments').filter(a => a.date === iso);
+    if (currentMode === 'personal')  appts = appts.filter(a => a.cat === 'personal');
+    else if (currentMode === 'work') appts = appts.filter(a => a.cat !== 'personal');
+    appts.sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
+    if (!appts.length) {
+      sched.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet(\'newAppt\')">+ Add one</span></div>';
+      return;
+    }
+    sched.innerHTML = appts.map(a => `
+      <div class="agenda-item" style="border:none;padding:10px 0;margin:0;cursor:pointer;" onclick="editAppt('${a.id}')">
+        <div class="agenda-stripe" style="background:${a.color||'var(--sky)'};"></div>
+        <div class="agenda-info"><div class="agenda-title">${a.title}</div><div class="agenda-meta">${a.notes||''}</div><span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span></div>
+        <div class="agenda-time">${fmtTime(a.time)}</div>
+      </div>`).join('');
+  }
+
+  // Select today's date in the agenda (falls back gracefully when the
+  // calendar is showing a different month)
+  function selectTodayAgenda() {
+    const t = new Date();
+    if (t.getFullYear() === calYear && t.getMonth() === calMonth) {
+      selectDayData(t.getDate(), t.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}));
+    } else {
+      const hdr = document.getElementById('agendaHeader');
+      if (hdr) hdr.textContent = new Date(calYear, calMonth, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+      const list = document.getElementById('agendaList');
+      if (list) list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Tap a day to see appointments.</div>';
+    }
+  }
+
   // ── SET TODAY'S DATE ON APPOINTMENT FORM ──
   function initDateFields() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localISO(new Date());
     const apptDate = document.getElementById('apptDate');
     if (apptDate && !apptDate.value) apptDate.value = today;
     const taskDue = document.getElementById('taskDue');
     if (taskDue && !taskDue.value) taskDue.value = today;
   }
 
-  // ── SAVE APPOINTMENT ──
+  // ── SAVE / EDIT APPOINTMENT ──
+  let _editApptId = null;
+
   function saveAppointment() {
     const title = (document.getElementById('apptTitle').value || '').trim();
     const date  = document.getElementById('apptDate').value;
@@ -2470,27 +2525,64 @@
     if (!title) { showToast('⚠️ Please enter a title'); return; }
     if (!date)  { showToast('⚠️ Please select a date'); return; }
 
-    DB.add('appointments', {
-      id: 'appt_' + Date.now(), title, date, time, cat, notes,
-      color: CAT_COLOR[cat] || 'var(--sky)',
-      created: new Date().toISOString()
-    });
+    if (_editApptId) {
+      DB.update('appointments', _editApptId, { title, date, time, cat, notes, color: CAT_COLOR[cat] || 'var(--sky)' });
+      showToast('✓ Appointment updated');
+    } else {
+      DB.add('appointments', {
+        id: 'appt_' + Date.now(), title, date, time, cat, notes,
+        color: CAT_COLOR[cat] || 'var(--sky)',
+        created: new Date().toISOString()
+      });
+      showToast('✓ Appointment saved to calendar');
+    }
 
     closeSheet('newAppt');
-    document.getElementById('apptTitle').value = '';
-    document.getElementById('apptNotes').value = '';
     buildCalendar();
     refreshWeekViewIfVisible();
     updateHomeStats();
-    showToast('✓ Appointment saved to calendar');
+    renderTodaySchedule();
 
     // Jump calendar to the saved date's month
     const d = new Date(date + 'T00:00:00');
     calYear = d.getFullYear(); calMonth = d.getMonth();
     buildCalendar();
-    // Show the day in agenda
-    const weekday = d.toLocaleDateString('en-US',{weekday:'long'});
     selectDayFromDate(d);
+  }
+
+  function editAppt(id) {
+    const a = DB.get('appointments').find(x => x.id === id);
+    if (!a) return;
+    _editApptId = id;
+    document.getElementById('apptTitle').value = a.title || '';
+    document.getElementById('apptDate').value  = a.date  || '';
+    document.getElementById('apptTime').value  = a.time  || '';
+    document.getElementById('apptCat').value   = a.cat   || 'work';
+    document.getElementById('apptNotes').value = a.notes || '';
+    document.getElementById('apptSheetTitle').textContent = 'Edit Appointment';
+    document.getElementById('apptSaveBtn').textContent = '✓ Save Changes';
+    document.getElementById('apptDeleteBtn').style.display = '';
+    openSheet('newAppt');
+  }
+
+  function deleteApptFromSheet() {
+    if (!_editApptId) return;
+    const id = _editApptId;
+    closeSheet('newAppt');
+    deleteAppt(id);
+    renderTodaySchedule();
+    refreshWeekViewIfVisible();
+    updateHomeStats();
+  }
+
+  function resetApptSheet() {
+    _editApptId = null;
+    document.getElementById('apptTitle').value = '';
+    document.getElementById('apptTime').value  = '';
+    document.getElementById('apptNotes').value = '';
+    document.getElementById('apptSheetTitle').textContent = 'Add Appointment';
+    document.getElementById('apptSaveBtn').textContent = '✓ Add to Calendar';
+    document.getElementById('apptDeleteBtn').style.display = 'none';
   }
 
   function selectDayFromDate(d) {
@@ -2513,7 +2605,9 @@
     if (calView === 'week') buildWeekView();
   }
 
-  // ── SAVE CONTACT ──
+  // ── SAVE / EDIT CONTACT ──
+  let _editContactId = null;
+
   function saveContact() {
     const firstName = (document.getElementById('cFirstName').value||'').trim();
     const lastName  = (document.getElementById('cLastName').value||'').trim();
@@ -2525,25 +2619,54 @@
 
     if (!firstName && !lastName) { showToast('⚠️ Please enter a name'); return; }
 
-    DB.add('contacts', {
-      id: 'contact_' + Date.now(),
-      firstName, lastName, company, email, phone, cat, notes,
-      color: nextColor(),
-      added: new Date().toISOString()
-    });
+    if (_editContactId) {
+      DB.update('contacts', _editContactId, { firstName, lastName, company, email, phone, cat, notes });
+      showToast('✓ Contact updated');
+    } else {
+      DB.add('contacts', {
+        id: 'contact_' + Date.now(),
+        firstName, lastName, company, email, phone, cat, notes,
+        color: nextColor(),
+        added: new Date().toISOString()
+      });
+      showToast('✓ Contact saved');
+    }
 
     closeSheet('addContact');
+    renderContacts();
+    updateHomeStats();
+  }
+
+  function editContact(id) {
+    const c = DB.get('contacts').find(x => x.id === id);
+    if (!c) return;
+    closeSheet('contactDetail');
+    _editContactId = id;
+    document.getElementById('cFirstName').value = c.firstName || '';
+    document.getElementById('cLastName').value  = c.lastName  || '';
+    document.getElementById('cCompany').value   = c.company   || '';
+    document.getElementById('cEmail').value     = c.email     || '';
+    document.getElementById('cPhone').value     = c.phone     || '';
+    document.getElementById('cCat').value       = c.cat       || 'networking';
+    document.getElementById('cNotes').value     = c.notes     || '';
+    document.getElementById('contactSheetTitle').textContent = 'Edit Contact';
+    document.getElementById('contactSaveBtn').textContent = 'Save Changes';
+    openSheet('addContact');
+  }
+
+  function resetContactSheet() {
+    _editContactId = null;
     ['cFirstName','cLastName','cCompany','cEmail','cPhone','cNotes'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
-
-    renderContacts();
-    updateHomeStats();
-    showToast('✓ Contact saved');
+    document.getElementById('contactSheetTitle').textContent = 'Add Contact';
+    document.getElementById('contactSaveBtn').textContent = 'Save Contact';
   }
 
-  // ── SAVE TASK ──
+  // ── SAVE / EDIT TASK ──
+  let _editTaskId = null;
+
   function saveTask() {
     const title    = (document.getElementById('taskTitle').value||'').trim();
     const priority = document.getElementById('taskPriority').value || 'urgent';
@@ -2551,16 +2674,51 @@
 
     if (!title) { showToast('⚠️ Please enter a task'); return; }
 
-    DB.add('tasks', {
-      id: 'task_' + Date.now(), title, priority, due,
-      done: false, created: new Date().toISOString()
-    });
+    if (_editTaskId) {
+      DB.update('tasks', _editTaskId, { title, priority, due });
+      showToast('✓ Task updated');
+    } else {
+      DB.add('tasks', {
+        id: 'task_' + Date.now(), title, priority, due,
+        done: false, created: new Date().toISOString()
+      });
+      showToast('✓ Task added');
+    }
 
     closeSheet('addTask');
-    document.getElementById('taskTitle').value = '';
     renderTasks();
     updateHomeStats();
-    showToast('✓ Task added');
+  }
+
+  function editTask(id) {
+    const t = DB.get('tasks').find(x => x.id === id);
+    if (!t) return;
+    _editTaskId = id;
+    document.getElementById('taskTitle').value    = t.title || '';
+    document.getElementById('taskPriority').value = t.priority || 'urgent';
+    document.getElementById('taskDue').value      = t.due || '';
+    document.getElementById('taskSheetTitle').textContent = 'Edit Task';
+    document.getElementById('taskSaveBtn').textContent = 'Save Changes';
+    document.getElementById('taskDeleteBtn').style.display = '';
+    openSheet('addTask');
+  }
+
+  function deleteTaskFromSheet() {
+    if (!_editTaskId) return;
+    DB.del('tasks', _editTaskId);
+    closeSheet('addTask');
+    renderTasks();
+    updateHomeStats();
+    showToast('Task removed');
+  }
+
+  function resetTaskSheet() {
+    _editTaskId = null;
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskDue').value   = '';
+    document.getElementById('taskSheetTitle').textContent = 'Add Task';
+    document.getElementById('taskSaveBtn').textContent = 'Add Task';
+    document.getElementById('taskDeleteBtn').style.display = 'none';
   }
 
   function completeTask(el) {
@@ -2694,7 +2852,10 @@
         </div>
         ${logsHtml}
       </div>
-      <button class="btn btn-outline btn-block btn-sm" style="color:var(--pink-dark);border-color:var(--pink-light);" onclick="deleteContact('${c.id}')">Remove Contact</button>`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-sky btn-sm" style="background:var(--sky);color:white;" onclick="editContact('${c.id}')">✎ Edit Contact</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--pink-dark);border-color:var(--pink-light);" onclick="deleteContact('${c.id}')">Remove Contact</button>
+      </div>`;
     openSheet('contactDetail');
   }
 
@@ -2730,8 +2891,8 @@
       const isOverdue = t.due && new Date(t.due+'T23:59:59') < new Date();
       return `<div class="task-item ${isUrgent?'urgent':'normal'}" data-id="${t.id}">
         <div class="task-check" onclick="completeTask(this)"></div>
-        <div class="task-text"><strong>${t.priority==='urgent'?'⚠️ ':''} ${t.title}</strong></div>
-        ${dueStr?`<div class="task-due" style="${isOverdue?'color:var(--pink-dark);':''}">${isOverdue?'⚠️ ':''} ${dueStr}</div>`:''}
+        <div class="task-text" style="cursor:pointer;" onclick="editTask('${t.id}')"><strong>${t.priority==='urgent'?'⚠️ ':''} ${t.title}</strong></div>
+        ${dueStr?`<div class="task-due" style="cursor:pointer;${isOverdue?'color:var(--pink-dark);':''}" onclick="editTask('${t.id}')">${isOverdue?'⚠️ ':''} ${dueStr}</div>`:''}
       </div>`;
     }).join('');
 
@@ -2864,10 +3025,10 @@
     list.innerHTML = Object.entries(timeGroups).map(([time, group]) => {
       if (group.length > 1) {
         return `<div class="agenda-sidebyside">
-          <div class="sbs-time">${time}</div>
+          <div class="sbs-time">${time==='All day'?time:fmtTime(time)}</div>
           <div class="sbs-events">
             ${group.map(a => `
-              <div class="sbs-event" style="border-left:4px solid ${a.color||'var(--sky)'};">
+              <div class="sbs-event" style="border-left:4px solid ${a.color||'var(--sky)'};cursor:pointer;" onclick="editAppt('${a.id}')">
                 <div class="sbs-event-title">${a.title}</div>
                 <div class="sbs-event-meta">${a.notes||CAT_LABEL[a.cat]||''}</div>
                 <span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span>
@@ -2884,8 +3045,11 @@
           <span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-          <div class="agenda-time">${a.time||'All day'}</div>
-          <div style="font-size:10px;color:var(--pink-dark);cursor:pointer;" onclick="deleteAppt('${a.id}')">✕ Remove</div>
+          <div class="agenda-time">${fmtTime(a.time)}</div>
+          <div style="display:flex;gap:10px;">
+            <div style="font-size:10px;color:var(--sky);cursor:pointer;font-weight:600;" onclick="editAppt('${a.id}')">✎ Edit</div>
+            <div style="font-size:10px;color:var(--pink-dark);cursor:pointer;" onclick="deleteAppt('${a.id}')">✕ Remove</div>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -2907,11 +3071,10 @@
   // Override navCal to use dynamic year/month
   function navCal(dir) {
     if (calView === 'week') {
-      weekOffset = Math.max(0, Math.min(1, weekOffset + dir));
+      weekOffset += dir;
       buildWeekView();
-      const lbl = weekOffset===1?'Week of Jun 14–20':'Week of Jun 7–13';
       const hdr = document.getElementById('agendaHeader');
-      if (hdr) hdr.textContent = lbl + ' — tap a day to see details';
+      if (hdr) hdr.textContent = document.getElementById('calNavLabel').textContent + ' — tap a day for details';
     } else {
       calMonth += dir;
       if (calMonth < 0)  { calMonth = 11; calYear--; }
