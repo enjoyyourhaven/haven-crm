@@ -835,6 +835,12 @@
           <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet('newAppt')">+ Add one</span></div>
         </div>
       </div>
+
+      <!-- Tomorrow -->
+      <div class="card">
+        <div class="card-title">Tomorrow's Schedule</div>
+        <div id="tomorrowSchedule"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -842,6 +848,22 @@
         <div style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;line-height:1.6;">
           No activity yet.<br>Start by scanning a card or adding a contact.
         </div>
+    </div>
+
+    <!-- Goals & Brain Dump -->
+    <div class="card">
+      <div class="card-title">🧠 Goals & Brain Dump</div>
+      <div class="seg-control" id="goalsSeg" style="margin-bottom:10px;">
+        <button class="seg-btn active" onclick="setGoalTab('week',this)">Week</button>
+        <button class="seg-btn" onclick="setGoalTab('month',this)">Month</button>
+        <button class="seg-btn" onclick="setGoalTab('quarter',this)">Quarter</button>
+        <button class="seg-btn" onclick="setGoalTab('year',this)">Year</button>
+      </div>
+      <div id="goalsList"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input class="form-input" id="goalInput" placeholder="Dump a thought or goal…" style="flex:1;" onkeydown="if(event.key==='Enter')addGoal()">
+        <button class="btn btn-sky btn-sm" id="goalAddBtn" style="background:var(--sky);color:white;flex-shrink:0;" onclick="addGoal()">+ Add</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2506,9 +2528,11 @@
     tasks:        { table: 'crm_tasks',    order: 'created',
                     cols: { title:'title', priority:'priority', due:'due', done:'done', created:'created' } },
     emailLogs:    { table: 'email_logs',   order: 'date',
-                    cols: { contactId:'contact_id', subject:'subject', direction:'direction', account:'account', notes:'notes', date:'date' } }
+                    cols: { contactId:'contact_id', subject:'subject', direction:'direction', account:'account', notes:'notes', date:'date' } },
+    goals:        { table: 'crm_goals',    order: 'created',
+                    cols: { title:'title', horizon:'horizon', done:'done', created:'created' } }
   };
-  const _cache = { contacts: [], appointments: [], tasks: [], emailLogs: [] };
+  const _cache = { contacts: [], appointments: [], tasks: [], emailLogs: [], goals: [] };
 
   function toRow(k, item) {
     const row = {};
@@ -2552,6 +2576,9 @@
           if (e2) { console.error('add ' + k, e2); showToast('⚠️ Cloud save failed — check your connection'); }
           else showToast('⚠️ Saved, but repeats need the recurring SQL — run it in Supabase');
         });
+      } else if (/crm_goals/i.test(error.message || '')) {
+        console.error('add ' + k, error);
+        showToast('⚠️ Saved on screen only — run the goals SQL in Supabase');
       } else {
         console.error('add ' + k, error);
         showToast('⚠️ Cloud save failed — check your connection');
@@ -2636,18 +2663,19 @@
     return fmtTime(a.time) + (a.endTime ? ' – ' + fmtTime(a.endTime) : '');
   }
 
-  // ── TODAY'S SCHEDULE (home screen, real data) ──
-  function renderTodaySchedule() {
-    const sched = document.getElementById('todaySchedule');
+  // ── TODAY / TOMORROW SCHEDULES (home screen, real data) ──
+  function _renderDaySchedule(containerId, dayOffset, emptyMsg) {
+    const sched = document.getElementById(containerId);
     if (!sched) return;
-    const iso = localISO(new Date());
+    const d = new Date(); d.setDate(d.getDate() + dayOffset);
+    const iso = localISO(d);
     let appts = DB.get('appointments').filter(a => a.date === iso);
     if (currentMode === 'personal')  appts = appts.filter(a => a.cat === 'personal');
     else if (currentMode === 'work') appts = appts.filter(a => a.cat !== 'personal');
     appts.sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
     if (!appts.length) {
-      sched.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet(\'newAppt\')">+ Add one</span></div>';
+      sched.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">' + emptyMsg + ' — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet(\'newAppt\')">+ Add one</span></div>';
       return;
     }
     sched.innerHTML = appts.map(a => `
@@ -2656,6 +2684,85 @@
         <div class="agenda-info"><div class="agenda-title">${a.title}${a.seriesId?' 🔁':''}</div><div class="agenda-meta">${a.notes||''}</div><span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span></div>
         <div class="agenda-time">${fmtRange(a)}</div>
       </div>`).join('');
+  }
+
+  function renderTodaySchedule() {
+    _renderDaySchedule('todaySchedule', 0, 'No appointments today');
+    _renderDaySchedule('tomorrowSchedule', 1, 'Nothing tomorrow yet');
+  }
+
+  // ── GOALS & BRAIN DUMP (week / month / quarter / year) ──
+  let _goalTab = 'week';
+  let _editGoalId = null;
+  const GOAL_LABELS = { week: 'this week', month: 'this month', quarter: 'this quarter', year: 'this year' };
+
+  function setGoalTab(h, el) {
+    _goalTab = h;
+    document.querySelectorAll('#goalsSeg .seg-btn').forEach(b => b.className = 'seg-btn');
+    if (el) el.className = 'seg-btn active';
+    _editGoalId = null;
+    const inp = document.getElementById('goalInput');
+    if (inp) inp.value = '';
+    document.getElementById('goalAddBtn').textContent = '+ Add';
+    renderGoals();
+  }
+
+  function renderGoals() {
+    const list = document.getElementById('goalsList');
+    if (!list) return;
+    const items = DB.get('goals').filter(g => g.horizon === _goalTab);
+    if (!items.length) {
+      list.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--text-muted);font-size:12.5px;">Nothing for ${GOAL_LABELS[_goalTab]} yet — dump a thought below.</div>`;
+      return;
+    }
+    const row = g => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--mist);">
+        <div onclick="toggleGoal('${g.id}')" style="width:20px;height:20px;flex-shrink:0;border:2px solid ${g.done?'var(--green)':'var(--border)'};border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${g.done?'var(--green)':'transparent'};color:white;font-size:11px;">${g.done?'✓':''}</div>
+        <div onclick="editGoal('${g.id}')" style="flex:1;font-size:13px;cursor:pointer;line-height:1.4;${g.done?'text-decoration:line-through;opacity:0.5;':''}">${g.title}</div>
+        <div onclick="deleteGoal('${g.id}')" style="color:var(--pink-dark);cursor:pointer;font-size:11px;font-weight:600;flex-shrink:0;">✕</div>
+      </div>`;
+    list.innerHTML = [...items.filter(g => !g.done), ...items.filter(g => g.done)].map(row).join('');
+  }
+
+  function addGoal() {
+    const inp = document.getElementById('goalInput');
+    const title = (inp.value || '').trim();
+    if (!title) { showToast('⚠️ Type or dictate something first'); return; }
+    if (_editGoalId) {
+      DB.update('goals', _editGoalId, { title });
+      _editGoalId = null;
+      document.getElementById('goalAddBtn').textContent = '+ Add';
+      showToast('✓ Updated');
+    } else {
+      DB.add('goals', { id: 'goal_' + Date.now(), title, horizon: _goalTab, done: false, created: new Date().toISOString() });
+      showToast('✓ Added to ' + GOAL_LABELS[_goalTab]);
+    }
+    inp.value = '';
+    renderGoals();
+  }
+
+  function editGoal(id) {
+    const g = DB.get('goals').find(x => x.id === id);
+    if (!g) return;
+    _editGoalId = id;
+    const inp = document.getElementById('goalInput');
+    inp.value = g.title;
+    inp.focus();
+    document.getElementById('goalAddBtn').textContent = 'Save';
+  }
+
+  function toggleGoal(id) {
+    const g = DB.get('goals').find(x => x.id === id);
+    if (!g) return;
+    DB.update('goals', id, { done: !g.done });
+    renderGoals();
+  }
+
+  function deleteGoal(id) {
+    DB.del('goals', id);
+    if (_editGoalId === id) { _editGoalId = null; document.getElementById('goalInput').value = ''; document.getElementById('goalAddBtn').textContent = '+ Add'; }
+    renderGoals();
+    showToast('Removed');
   }
 
   // Select today's date in the agenda (falls back gracefully when the
@@ -3776,6 +3883,7 @@
     updateHomeStats();
     renderEvents();
     renderAdmins();
+    renderGoals();
     initDateFields();
     // Init manual entry voice memo
     const manualVmEl = document.getElementById('vm-manual-container');

@@ -53,6 +53,15 @@ create table if not exists public.crm_tasks (
   created  timestamptz default now()
 );
 
+-- Goals & brain dump (added 2026-07-20)
+create table if not exists public.crm_goals (
+  id      text primary key,
+  title   text not null,
+  horizon text default 'week',
+  done    boolean default false,
+  created timestamptz default now()
+);
+
 create table if not exists public.email_logs (
   id         text primary key,
   contact_id text,
@@ -126,6 +135,13 @@ create policy "CRM owner access" on public.crm_tasks
 
 drop policy if exists "CRM owner access" on public.email_logs;
 create policy "CRM owner access" on public.email_logs
+  for all to authenticated
+  using (public.is_crm_admin())
+  with check (public.is_crm_admin());
+
+alter table public.crm_goals enable row level security;
+drop policy if exists "CRM owner access" on public.crm_goals;
+create policy "CRM owner access" on public.crm_goals
   for all to authenticated
   using (public.is_crm_admin())
   with check (public.is_crm_admin());
