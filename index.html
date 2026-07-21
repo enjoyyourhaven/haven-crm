@@ -2701,6 +2701,20 @@
     if (!a.time) return 'All day';
     return fmtTime(a.time) + (a.endTime ? ' – ' + fmtTime(a.endTime) : '');
   }
+  // A time input someone started filling but didn't finish (e.g. AM/PM
+  // left on "--") reports an empty value — catch it instead of silently
+  // saving the appointment as all-day.
+  function _incompleteTime(id) {
+    const el = document.getElementById(id);
+    return !!(el && el.value === '' && el.validity && el.validity.badInput);
+  }
+  function _timesLookIncomplete(startId, endId) {
+    if (_incompleteTime(startId) || _incompleteTime(endId)) {
+      showToast('⚠️ The time box is only half-filled — set hour, minutes AND AM/PM');
+      return true;
+    }
+    return false;
+  }
 
   // ── TODAY / TOMORROW SCHEDULES (home screen, real data) ──
   function _renderDaySchedule(containerId, dayOffset, emptyMsg) {
@@ -2924,6 +2938,7 @@
 
     if (!title) { showToast('⚠️ Please enter a title'); return; }
     if (!date)  { showToast('⚠️ Please select a date'); return; }
+    if (_timesLookIncomplete('apptTime', 'apptEndTime')) return;
     if (endTime && !time) { showToast('⚠️ Add a start time first (or clear the end time)'); return; }
     if (endTime && time && endTime <= time) { showToast('⚠️ End time must be after the start time'); return; }
 
@@ -3092,6 +3107,7 @@
     const desc = (document.getElementById('evDesc').value||'').trim();
     if (!name) { showToast('⚠️ Please enter an event name'); return; }
     if (!date) { showToast('⚠️ Please select a date'); return; }
+    if (_timesLookIncomplete('evTime', 'evEndTime')) return;
     if (endTime && time && endTime <= time) { showToast('⚠️ End time must be after the start time'); return; }
     DB.add('appointments', {
       id: 'event_' + Date.now(), title: name, date, time, endTime: time ? endTime : '', cat,
@@ -3115,6 +3131,7 @@
     const kind = document.getElementById('pevKind').value || '';
     if (!name) { showToast('⚠️ Please enter an event name'); return; }
     if (!date) { showToast('⚠️ Please select a date'); return; }
+    if (_timesLookIncomplete('pevTime', 'pevEndTime')) return;
     if (endTime && time && endTime <= time) { showToast('⚠️ End time must be after the start time'); return; }
     DB.add('appointments', {
       id: 'event_' + Date.now(), title: name, date, time, endTime: time ? endTime : '', cat: 'personal',
