@@ -484,6 +484,11 @@
   .week-time-col { width:38px; flex-shrink:0; }
   .week-time-label { height:56px; font-size:9px; color:var(--text-muted); text-align:right; padding:4px 5px 0 0; border-top:1px solid var(--mist); }
   .week-days-grid { flex:1; display:grid; grid-template-columns:repeat(7,1fr); }
+  .week-allday-row { display:grid; grid-template-columns:38px repeat(7,1fr); background:var(--white); border-bottom:2px solid var(--border); }
+  .week-allday-gutter { font-size:8px; color:var(--text-muted); text-align:right; padding:4px 5px 0 0; text-transform:uppercase; }
+  .week-allday-cell { min-height:24px; padding:2px; border-left:1px solid var(--mist); }
+  .week-allday-cell.w-today { background:#FFFBF2; }
+  .week-allday-chip { font-size:9px; font-weight:600; color:var(--white); border-radius:5px; padding:2px 5px; margin-bottom:2px; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .week-day-col { position:relative; border-left:1px solid var(--mist); }
   .week-day-col.w-today { background:#FFFBF2; }
   .week-hour-cell { height:56px; border-top:1px solid var(--mist); }
@@ -2240,26 +2245,46 @@
     }
     times += '</div>';
 
+    const modeFilter = a => {
+      if (calMode === 'all')        return true;
+      if (calMode === 'networking') return a.cat === 'networking' || a.cat === 'new';
+      if (calMode === 'work')       return a.cat === 'work' || a.cat === 'urgent';
+      if (calMode === 'personal')   return a.cat === 'personal';
+      return true;
+    };
+
+    // All-day strip (appointments without a time never fit the hour grid)
+    let allday = '<div class="week-allday-row"><div class="week-allday-gutter">all<br>day</div>';
+    let hasAllday = false;
+    dayDates.forEach(d => {
+      const iso = localISO(d);
+      const dayAll = appts.filter(a => a.date === iso && !a.time).filter(modeFilter);
+      if (dayAll.length) hasAllday = true;
+      allday += `<div class="week-allday-cell${iso === todayIso ? ' w-today' : ''}">` +
+        dayAll.map(a => `<div class="week-allday-chip" style="background:${a.color || CAT_COLOR[a.cat] || 'var(--sky)'};" onclick="editAppt('${a.id}')" title="${a.title}">${a.title}</div>`).join('') +
+        '</div>';
+    });
+    allday += '</div>';
+    if (!hasAllday) allday = '';
+
     let cols = '<div class="week-days-grid">';
     dayDates.forEach(d => {
       const iso = localISO(d);
       cols += `<div class="week-day-col${iso === todayIso ? ' w-today' : ''}">`;
       for (let hr = startH; hr < endH; hr++) cols += '<div class="week-hour-cell"></div>';
 
-      const raw = appts.filter(a => a.date === iso).filter(a => {
-        if (calMode === 'all')        return true;
-        if (calMode === 'networking') return a.cat === 'networking' || a.cat === 'new';
-        if (calMode === 'work')       return a.cat === 'work' || a.cat === 'urgent';
-        if (calMode === 'personal')   return a.cat === 'personal';
-        return true;
-      }).map(a => {
+      const raw = appts.filter(a => a.date === iso && a.time).filter(modeFilter).map(a => {
         const parts = (a.time || '').split(':').map(Number);
-        return { id: a.id, h: isNaN(parts[0]) ? 9 : parts[0], m: isNaN(parts[1]) ? 0 : parts[1], dur: 60,
+        let hh = isNaN(parts[0]) ? 9 : parts[0];
+        let mm = isNaN(parts[1]) ? 0 : parts[1];
+        // Clamp very early / very late times into the visible 7a–9p grid
+        if (hh < startH)  { hh = startH; mm = 0; }
+        if (hh >= endH)   { hh = endH - 1; mm = 0; }
+        return { id: a.id, h: hh, m: mm, dur: 60,
                  title: a.title, cat: a.cat, color: a.color || CAT_COLOR[a.cat] || 'var(--sky)' };
       });
 
       resolveOverlaps(raw).forEach(a => {
-        if (a.h < startH || a.h >= endH) return;
         const top    = (a.h - startH) * hourH + (a.m / 60 * hourH);
         const height = Math.max(a.dur / 60 * hourH - 3, 18);
         const pct    = 100 / a.totalCols;
@@ -2272,7 +2297,7 @@
     });
     cols += '</div>';
 
-    document.getElementById('weekInner').innerHTML = h + `<div class="week-body">${times}${cols}</div>`;
+    document.getElementById('weekInner').innerHTML = h + allday + `<div class="week-body">${times}${cols}</div>`;
     setTimeout(() => { const b = document.querySelector('.week-body'); if (b) b.scrollTop = 2 * hourH; }, 50);
   }
 
