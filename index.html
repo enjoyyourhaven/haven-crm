@@ -816,30 +816,30 @@
   <div class="stats-grid" id="homeStats"></div>
   <div class="quick-actions" id="homeActions"></div>
 
+  <!-- Row 1: Today + Tomorrow side by side -->
   <div class="ipad-2col">
-    <div>
-      <!-- Urgent Tasks -->
-      <div class="card" id="urgentCard">
-        <div class="card-title" style="color:var(--pink-dark);">🔴 Urgent Tasks
-          <button class="btn btn-pink btn-sm" onclick="openSheet('addTask')">+ Add</button>
-        </div>
-        <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">
-          No urgent tasks — you're all caught up! 🎉<br>
-          <span style="color:var(--pink);cursor:pointer;font-weight:500;" onclick="openSheet('addTask')">+ Add a task</span>
-        </div>
+    <div class="card">
+      <div class="card-title">Today's Schedule <span style="font-weight:400;color:var(--text-muted);font-size:11px;cursor:pointer;" onclick="switchTab('calendar')">View calendar →</span></div>
+      <div id="todaySchedule">
+        <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet('newAppt')">+ Add one</span></div>
       </div>
+    </div>
 
-      <div class="card">
-        <div class="card-title">Today's Schedule <span style="font-weight:400;color:var(--text-muted);font-size:11px;cursor:pointer;" onclick="switchTab('calendar')">View calendar →</span></div>
-        <div id="todaySchedule">
-          <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">No appointments today — <span style="color:var(--sky);cursor:pointer;" onclick="openSheet('newAppt')">+ Add one</span></div>
-        </div>
+    <div class="card">
+      <div class="card-title">Tomorrow's Schedule</div>
+      <div id="tomorrowSchedule"></div>
+    </div>
+  </div>
+
+  <!-- Row 2: Urgent Tasks + Recent Activity -->
+  <div class="ipad-2col">
+    <div class="card" id="urgentCard">
+      <div class="card-title" style="color:var(--pink-dark);">🔴 Urgent Tasks
+        <button class="btn btn-pink btn-sm" onclick="openSheet('addTask')">+ Add</button>
       </div>
-
-      <!-- Tomorrow -->
-      <div class="card">
-        <div class="card-title">Tomorrow's Schedule</div>
-        <div id="tomorrowSchedule"></div>
+      <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:13px;">
+        No urgent tasks — you're all caught up! 🎉<br>
+        <span style="color:var(--pink);cursor:pointer;font-weight:500;" onclick="openSheet('addTask')">+ Add a task</span>
       </div>
     </div>
 
@@ -849,10 +849,12 @@
           No activity yet.<br>Start by scanning a card or adding a contact.
         </div>
     </div>
+  </div>
 
-    <!-- Goals & Brain Dump -->
+  <!-- Row 3: Goals + Brain Dump as separate cards -->
+  <div class="ipad-2col">
     <div class="card">
-      <div class="card-title">🧠 Goals & Brain Dump</div>
+      <div class="card-title">🎯 Goals</div>
       <div class="seg-control" id="goalsSeg" style="margin-bottom:10px;">
         <button class="seg-btn active" onclick="setGoalTab('week',this)">Week</button>
         <button class="seg-btn" onclick="setGoalTab('month',this)">Month</button>
@@ -861,8 +863,18 @@
       </div>
       <div id="goalsList"></div>
       <div style="display:flex;gap:8px;margin-top:10px;">
-        <input class="form-input" id="goalInput" placeholder="Dump a thought or goal…" style="flex:1;" onkeydown="if(event.key==='Enter')addGoal()">
+        <input class="form-input" id="goalInput" placeholder="Add a goal…" style="flex:1;" onkeydown="if(event.key==='Enter')addGoal()">
         <button class="btn btn-sky btn-sm" id="goalAddBtn" style="background:var(--sky);color:white;flex-shrink:0;" onclick="addGoal()">+ Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧠 Brain Dump</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">Get it out of your head — sort it later.</div>
+      <div id="dumpList"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input class="form-input" id="dumpInput" placeholder="Dump a thought…" style="flex:1;" onkeydown="if(event.key==='Enter')addDump()">
+        <button class="btn btn-sky btn-sm" id="dumpAddBtn" style="background:var(--sky);color:white;flex-shrink:0;" onclick="addDump()">+ Add</button>
       </div>
     </div>
   </div>
@@ -2765,6 +2777,67 @@
     showToast('Removed');
   }
 
+  // ── BRAIN DUMP (same crm_goals table, its own 'dump' bucket) ──
+  let _editDumpId = null;
+
+  function renderDump() {
+    const list = document.getElementById('dumpList');
+    if (!list) return;
+    const items = DB.get('goals').filter(g => g.horizon === 'dump');
+    if (!items.length) {
+      list.innerHTML = '<div style="text-align:center;padding:16px 10px;color:var(--text-muted);font-size:12.5px;">Empty head, full heart. Dump a thought below.</div>';
+      return;
+    }
+    const row = g => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--mist);">
+        <div onclick="toggleDump('${g.id}')" style="width:20px;height:20px;flex-shrink:0;border:2px solid ${g.done?'var(--green)':'var(--border)'};border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${g.done?'var(--green)':'transparent'};color:white;font-size:11px;">${g.done?'✓':''}</div>
+        <div onclick="editDump('${g.id}')" style="flex:1;font-size:13px;cursor:pointer;line-height:1.4;${g.done?'text-decoration:line-through;opacity:0.5;':''}">${g.title}</div>
+        <div onclick="deleteDump('${g.id}')" style="color:var(--pink-dark);cursor:pointer;font-size:11px;font-weight:600;flex-shrink:0;">✕</div>
+      </div>`;
+    list.innerHTML = [...items.filter(g => !g.done), ...items.filter(g => g.done)].map(row).join('');
+  }
+
+  function addDump() {
+    const inp = document.getElementById('dumpInput');
+    const title = (inp.value || '').trim();
+    if (!title) { showToast('⚠️ Type or dictate something first'); return; }
+    if (_editDumpId) {
+      DB.update('goals', _editDumpId, { title });
+      _editDumpId = null;
+      document.getElementById('dumpAddBtn').textContent = '+ Add';
+      showToast('✓ Updated');
+    } else {
+      DB.add('goals', { id: 'dump_' + Date.now(), title, horizon: 'dump', done: false, created: new Date().toISOString() });
+      showToast('✓ Out of your head');
+    }
+    inp.value = '';
+    renderDump();
+  }
+
+  function editDump(id) {
+    const g = DB.get('goals').find(x => x.id === id);
+    if (!g) return;
+    _editDumpId = id;
+    const inp = document.getElementById('dumpInput');
+    inp.value = g.title;
+    inp.focus();
+    document.getElementById('dumpAddBtn').textContent = 'Save';
+  }
+
+  function toggleDump(id) {
+    const g = DB.get('goals').find(x => x.id === id);
+    if (!g) return;
+    DB.update('goals', id, { done: !g.done });
+    renderDump();
+  }
+
+  function deleteDump(id) {
+    DB.del('goals', id);
+    if (_editDumpId === id) { _editDumpId = null; document.getElementById('dumpInput').value = ''; document.getElementById('dumpAddBtn').textContent = '+ Add'; }
+    renderDump();
+    showToast('Removed');
+  }
+
   // Select today's date in the agenda (falls back gracefully when the
   // calendar is showing a different month)
   function selectTodayAgenda() {
@@ -3884,6 +3957,7 @@
     renderEvents();
     renderAdmins();
     renderGoals();
+    renderDump();
     initDateFields();
     // Init manual entry voice memo
     const manualVmEl = document.getElementById('vm-manual-container');
