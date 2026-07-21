@@ -1445,6 +1445,12 @@
           </div>
         </div>
       </div>
+      <div class="form-group" id="apptApplySeriesRow" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;background:var(--gold-pale);border:1px solid var(--gold-light);border-radius:10px;padding:11px 13px;">
+          <input type="checkbox" id="apptApplySeries" style="width:20px;height:20px;accent-color:var(--gold);flex-shrink:0;">
+          <label for="apptApplySeries" style="font-size:13px;font-weight:500;cursor:pointer;">🔁 Apply these changes to <strong>every week</strong> in this series (keeps each one's date)</label>
+        </div>
+      </div>
       <button class="btn btn-green btn-block" id="apptSaveBtn" onclick="saveAppointment()">✓ Add to Calendar</button>
       <button class="btn btn-outline btn-block btn-sm" id="apptDeleteBtn" style="display:none;color:var(--pink-dark);border-color:var(--pink-light);margin-top:8px;" onclick="deleteApptFromSheet()">Delete Appointment</button>
       <button class="btn btn-outline btn-block btn-sm" id="apptDeleteSeriesBtn" style="display:none;color:var(--pink-dark);border-color:var(--pink-light);margin-top:8px;" onclick="deleteApptSeriesFromSheet()">Delete Whole Series 🔁</button>
@@ -2598,6 +2604,27 @@
     }).catch(e => { console.error('add ' + k, e); showToast('⚠️ Cloud save failed — check your connection'); });
   }
 
+  // Update with the same fallback: if a newer column is missing, save
+  // everything else and say which SQL to run (instead of losing the edit).
+  function _sbUpdate(k, id, row) {
+    sb.from(SB_TABLES[k].table).update(row).eq('id', id).then(({ error }) => {
+      if (!error) return;
+      const missingNewCol = (error.code === 'PGRST204' || /column/i.test(error.message || '')) &&
+        NEWER_COLS.some(c => (error.message || '').includes(c));
+      if (missingNewCol) {
+        const stripped = { ...row };
+        NEWER_COLS.forEach(x => delete stripped[x]);
+        sb.from(SB_TABLES[k].table).update(stripped).eq('id', id).then(({ error: e2 }) => {
+          if (e2) { console.error('update ' + k, e2); showToast('⚠️ Cloud save failed — check your connection'); }
+          else showToast('⚠️ Saved, but some fields need the latest SQL — run it in Supabase');
+        });
+      } else {
+        console.error('update ' + k, error);
+        showToast('⚠️ Cloud save failed — check your connection');
+      }
+    }).catch(e => { console.error('update ' + k, e); showToast('⚠️ Cloud save failed — check your connection'); });
+  }
+
   async function loadAllData() {
     const keys = Object.keys(SB_TABLES);
     const results = await Promise.all(
@@ -2645,7 +2672,7 @@
       _cache[k] = (_cache[k] || []).map(i => i.id === id ? { ...i, ...patch } : i);
       const row = toRow(k, patch);
       delete row.id;
-      _sbWrite(sb.from(SB_TABLES[k].table).update(row).eq('id', id), 'update ' + k);
+      _sbUpdate(k, id, row);
     }
   };
 
@@ -2901,8 +2928,21 @@
     if (endTime && time && endTime <= time) { showToast('⚠️ End time must be after the start time'); return; }
 
     if (_editApptId) {
-      DB.update('appointments', _editApptId, { title, date, time, endTime, cat, notes, color: CAT_COLOR[cat] || 'var(--sky)' });
-      showToast('✓ Appointment updated');
+      const cur = DB.get('appointments').find(x => x.id === _editApptId);
+      const applyAll = document.getElementById('apptApplySeries').checked;
+      if (cur && cur.seriesId && applyAll) {
+        // Whole series: same changes on every occurrence, each keeps its date
+        const sid = cur.seriesId;
+        const patch = { title, time, endTime, cat, notes, color: CAT_COLOR[cat] || 'var(--sky)' };
+        _cache.appointments = _cache.appointments.map(x => x.seriesId === sid ? { ...x, ...patch } : x);
+        const row = toRow('appointments', patch);
+        delete row.id;
+        _sbWrite(sb.from('appointments').update(row).eq('series_id', sid), 'update series');
+        showToast('✓ Whole series updated');
+      } else {
+        DB.update('appointments', _editApptId, { title, date, time, endTime, cat, notes, color: CAT_COLOR[cat] || 'var(--sky)' });
+        showToast('✓ Appointment updated');
+      }
     } else if (repeat !== 'none') {
       const dates = generateOccurrences(date, repeat, until);
       const seriesId = 'series_' + Date.now();
@@ -2951,6 +2991,8 @@
     document.getElementById('apptDeleteBtn').style.display = '';
     document.getElementById('apptDeleteBtn').textContent = a.seriesId ? 'Delete Just This One' : 'Delete Appointment';
     document.getElementById('apptDeleteSeriesBtn').style.display = a.seriesId ? '' : 'none';
+    document.getElementById('apptApplySeriesRow').style.display = a.seriesId ? '' : 'none';
+    document.getElementById('apptApplySeries').checked = false;
     // Repeat choice only applies when creating — hide it while editing
     document.getElementById('apptRepeatGroup').style.display = 'none';
     openSheet('newAppt');
@@ -2999,6 +3041,8 @@
     document.getElementById('apptDeleteBtn').style.display = 'none';
     document.getElementById('apptDeleteBtn').textContent = 'Delete Appointment';
     document.getElementById('apptDeleteSeriesBtn').style.display = 'none';
+    document.getElementById('apptApplySeriesRow').style.display = 'none';
+    document.getElementById('apptApplySeries').checked = false;
   }
 
   function selectDayFromDate(d) {
