@@ -1321,9 +1321,10 @@
       <div class="form-group"><label class="form-label">Color / Type</label>
         <select class="form-select" id="evCat"><option value="networking">🤝 Gold — Networking</option><option value="work">🟢 Green — Work / Business</option><option value="urgent">🔴 Pink — Urgent</option></select>
       </div>
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="evDate"></div>
       <div class="form-2col">
-        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="evDate"></div>
-        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="evTime"></div>
+        <div class="form-group"><label class="form-label">Start Time</label><input class="form-input" type="time" id="evTime"></div>
+        <div class="form-group"><label class="form-label">End Time (optional)</label><input class="form-input" type="time" id="evEndTime"></div>
       </div>
       <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="evLocation" placeholder="Venue & address"></div>
       <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="evDesc" placeholder="Appears in invite email"></textarea></div>
@@ -1342,9 +1343,10 @@
     <div class="sheet-header"><div class="sheet-title">🔵 Personal Event</div><button class="sheet-close" onclick="closeSheet('newPersonalEvent')">✕</button></div>
     <div class="sheet-body">
       <div class="form-group"><label class="form-label">Event Name</label><input class="form-input" id="pevName" placeholder="e.g. Birthday Dinner, Cookout"></div>
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="pevDate"></div>
       <div class="form-2col">
-        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="pevDate"></div>
-        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="pevTime"></div>
+        <div class="form-group"><label class="form-label">Start Time</label><input class="form-input" type="time" id="pevTime"></div>
+        <div class="form-group"><label class="form-label">End Time (optional)</label><input class="form-input" type="time" id="pevEndTime"></div>
       </div>
       <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="pevLocation" placeholder="Address or venue"></div>
       <div class="form-group"><label class="form-label">Category</label>
@@ -1365,9 +1367,10 @@
     <div class="sheet-header"><div class="sheet-title" id="apptSheetTitle">Add Appointment</div><button class="sheet-close" onclick="closeSheet('newAppt')">✕</button></div>
     <div class="sheet-body">
       <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="apptTitle" placeholder="e.g. Property showing — Oak Lawn"></div>
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="apptDate"></div>
       <div class="form-2col">
-        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="apptDate"></div>
-        <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="apptTime"></div>
+        <div class="form-group"><label class="form-label">Start Time</label><input class="form-input" type="time" id="apptTime"></div>
+        <div class="form-group"><label class="form-label">End Time (optional)</label><input class="form-input" type="time" id="apptEndTime"></div>
       </div>
       <div class="form-group"><label class="form-label">Color Category</label>
         <select class="form-select" id="apptCat">
@@ -2280,7 +2283,14 @@
         // Clamp very early / very late times into the visible 7a–9p grid
         if (hh < startH)  { hh = startH; mm = 0; }
         if (hh >= endH)   { hh = endH - 1; mm = 0; }
-        return { id: a.id, h: hh, m: mm, dur: 60,
+        // Block length from the end time when set (else 1 hour), kept inside the grid
+        let dur = 60;
+        if (a.endTime) {
+          const ep = a.endTime.split(':').map(Number);
+          if (!isNaN(ep[0])) dur = Math.max((ep[0] * 60 + (ep[1] || 0)) - (hh * 60 + mm), 30);
+        }
+        dur = Math.min(dur, (endH - hh) * 60 - mm);
+        return { id: a.id, h: hh, m: mm, dur: dur,
                  title: a.title, cat: a.cat, color: a.color || CAT_COLOR[a.cat] || 'var(--sky)' };
       });
 
@@ -2492,7 +2502,7 @@
     contacts:     { table: 'contacts',     order: 'added',
                     cols: { firstName:'first_name', lastName:'last_name', company:'company', email:'email', phone:'phone', cat:'cat', notes:'notes', color:'color', added:'added' } },
     appointments: { table: 'appointments', order: 'date',
-                    cols: { title:'title', date:'date', time:'time', cat:'cat', notes:'notes', color:'color', created:'created', repeat:'repeat', seriesId:'series_id' } },
+                    cols: { title:'title', date:'date', time:'time', endTime:'end_time', cat:'cat', notes:'notes', color:'color', created:'created', repeat:'repeat', seriesId:'series_id' } },
     tasks:        { table: 'crm_tasks',    order: 'created',
                     cols: { title:'title', priority:'priority', due:'due', done:'done', created:'created' } },
     emailLogs:    { table: 'email_logs',   order: 'date',
@@ -2530,7 +2540,7 @@
 
   // Insert with a fallback: if the database doesn't have a newer column
   // yet (SQL not run), strip the new fields, retry, and say which SQL to run.
-  const NEWER_COLS = ['repeat', 'series_id'];
+  const NEWER_COLS = ['repeat', 'series_id', 'end_time'];
   function _sbInsert(k, rows) {
     sb.from(SB_TABLES[k].table).insert(rows).then(({ error }) => {
       if (!error) return;
@@ -2620,6 +2630,11 @@
     if (isNaN(h)) return t;
     return (h % 12 || 12) + ':' + String(m || 0).padStart(2,'0') + ' ' + (h >= 12 ? 'PM' : 'AM');
   }
+  // "9:00 AM – 10:30 AM", "9:00 AM", or "All day"
+  function fmtRange(a) {
+    if (!a.time) return 'All day';
+    return fmtTime(a.time) + (a.endTime ? ' – ' + fmtTime(a.endTime) : '');
+  }
 
   // ── TODAY'S SCHEDULE (home screen, real data) ──
   function renderTodaySchedule() {
@@ -2639,7 +2654,7 @@
       <div class="agenda-item" style="border:none;padding:10px 0;margin:0;cursor:pointer;" onclick="editAppt('${a.id}')">
         <div class="agenda-stripe" style="background:${a.color||'var(--sky)'};"></div>
         <div class="agenda-info"><div class="agenda-title">${a.title}${a.seriesId?' 🔁':''}</div><div class="agenda-meta">${a.notes||''}</div><span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span></div>
-        <div class="agenda-time">${fmtTime(a.time)}</div>
+        <div class="agenda-time">${fmtRange(a)}</div>
       </div>`).join('');
   }
 
@@ -2694,6 +2709,7 @@
     const title  = (document.getElementById('apptTitle').value || '').trim();
     const date   = document.getElementById('apptDate').value;
     const time   = document.getElementById('apptTime').value;
+    let endTime  = document.getElementById('apptEndTime').value;
     const cat    = document.getElementById('apptCat').value || 'work';
     const notes  = (document.getElementById('apptNotes').value || '').trim();
     const repeat = document.getElementById('apptRepeat').value || 'none';
@@ -2701,23 +2717,25 @@
 
     if (!title) { showToast('⚠️ Please enter a title'); return; }
     if (!date)  { showToast('⚠️ Please select a date'); return; }
+    if (endTime && !time) { showToast('⚠️ Add a start time first (or clear the end time)'); return; }
+    if (endTime && time && endTime <= time) { showToast('⚠️ End time must be after the start time'); return; }
 
     if (_editApptId) {
-      DB.update('appointments', _editApptId, { title, date, time, cat, notes, color: CAT_COLOR[cat] || 'var(--sky)' });
+      DB.update('appointments', _editApptId, { title, date, time, endTime, cat, notes, color: CAT_COLOR[cat] || 'var(--sky)' });
       showToast('✓ Appointment updated');
     } else if (repeat !== 'none') {
       const dates = generateOccurrences(date, repeat, until);
       const seriesId = 'series_' + Date.now();
       const now = new Date().toISOString();
       DB.addMany('appointments', dates.map((d, i) => ({
-        id: 'appt_' + Date.now() + '_' + i, title, date: d, time, cat, notes,
+        id: 'appt_' + Date.now() + '_' + i, title, date: d, time, endTime, cat, notes,
         color: CAT_COLOR[cat] || 'var(--sky)',
         created: now, repeat, seriesId
       })));
       showToast('✓ ' + dates.length + ' appointments added (repeats ' + repeat + ')');
     } else {
       DB.add('appointments', {
-        id: 'appt_' + Date.now(), title, date, time, cat, notes,
+        id: 'appt_' + Date.now(), title, date, time, endTime, cat, notes,
         color: CAT_COLOR[cat] || 'var(--sky)',
         created: new Date().toISOString()
       });
@@ -2745,6 +2763,7 @@
     document.getElementById('apptTitle').value = a.title || '';
     document.getElementById('apptDate').value  = a.date  || '';
     document.getElementById('apptTime').value  = a.time  || '';
+    document.getElementById('apptEndTime').value = a.endTime || '';
     document.getElementById('apptCat').value   = a.cat   || 'work';
     document.getElementById('apptNotes').value = a.notes || '';
     document.getElementById('apptSheetTitle').textContent = a.seriesId ? 'Edit Appointment 🔁' : 'Edit Appointment';
@@ -2789,6 +2808,7 @@
     _editApptId = null;
     document.getElementById('apptTitle').value = '';
     document.getElementById('apptTime').value  = '';
+    document.getElementById('apptEndTime').value = '';
     document.getElementById('apptNotes').value = '';
     document.getElementById('apptRepeat').value = 'none';
     document.getElementById('apptRepeatUntil').value = '';
@@ -2827,18 +2847,20 @@
     const cat  = document.getElementById('evCat').value || 'networking';
     const date = document.getElementById('evDate').value;
     const time = document.getElementById('evTime').value;
+    const endTime = document.getElementById('evEndTime').value;
     const loc  = (document.getElementById('evLocation').value||'').trim();
     const desc = (document.getElementById('evDesc').value||'').trim();
     if (!name) { showToast('⚠️ Please enter an event name'); return; }
     if (!date) { showToast('⚠️ Please select a date'); return; }
+    if (endTime && time && endTime <= time) { showToast('⚠️ End time must be after the start time'); return; }
     DB.add('appointments', {
-      id: 'event_' + Date.now(), title: name, date, time, cat,
+      id: 'event_' + Date.now(), title: name, date, time, endTime: time ? endTime : '', cat,
       notes: [loc, desc].filter(Boolean).join(' — '),
       color: CAT_COLOR[cat] || 'var(--gold)',
       created: new Date().toISOString()
     });
     closeSheet('newEvent');
-    ['evName','evDate','evTime','evLocation','evDesc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['evName','evDate','evTime','evEndTime','evLocation','evDesc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     buildCalendar(); refreshWeekViewIfVisible(); renderTodaySchedule(); updateHomeStats(); renderEvents();
     showToast('✓ Event saved to calendar');
     if (openInvites) openSheet('invite');
@@ -2848,18 +2870,20 @@
     const name = (document.getElementById('pevName').value||'').trim();
     const date = document.getElementById('pevDate').value;
     const time = document.getElementById('pevTime').value;
+    const endTime = document.getElementById('pevEndTime').value;
     const loc  = (document.getElementById('pevLocation').value||'').trim();
     const kind = document.getElementById('pevKind').value || '';
     if (!name) { showToast('⚠️ Please enter an event name'); return; }
     if (!date) { showToast('⚠️ Please select a date'); return; }
+    if (endTime && time && endTime <= time) { showToast('⚠️ End time must be after the start time'); return; }
     DB.add('appointments', {
-      id: 'event_' + Date.now(), title: name, date, time, cat: 'personal',
+      id: 'event_' + Date.now(), title: name, date, time, endTime: time ? endTime : '', cat: 'personal',
       notes: [kind, loc].filter(Boolean).join(' — '),
       color: CAT_COLOR.personal,
       created: new Date().toISOString()
     });
     closeSheet('newPersonalEvent');
-    ['pevName','pevDate','pevTime','pevLocation'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['pevName','pevDate','pevTime','pevEndTime','pevLocation'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     buildCalendar(); refreshWeekViewIfVisible(); renderTodaySchedule(); updateHomeStats(); renderEvents();
     showToast('✓ Personal event saved');
     if (openInvites) openSheet('personalInvite');
@@ -2880,7 +2904,7 @@
         <div class="agenda-stripe" style="background:${a.color||'var(--sky)'};"></div>
         <div class="agenda-info">
           <div class="agenda-title">${a.title}${a.seriesId?' 🔁':''}</div>
-          <div class="agenda-meta">${new Date(a.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}${a.time?' · '+fmtTime(a.time):''}${a.notes?' · '+a.notes:''}</div>
+          <div class="agenda-meta">${new Date(a.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}${a.time?' · '+fmtRange(a):''}${a.notes?' · '+a.notes:''}</div>
         </div>
       </div>`;
     const empty = (color, sheet, label) =>
@@ -3375,7 +3399,7 @@
           <span class="agenda-contact" style="background:${CAT_PALE[a.cat]||'var(--mist)'};color:${CAT_TEXT[a.cat]||'var(--text)'};">${CAT_LABEL[a.cat]||''}</span>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-          <div class="agenda-time">${fmtTime(a.time)}</div>
+          <div class="agenda-time">${fmtRange(a)}</div>
           <div style="display:flex;gap:10px;">
             <div style="font-size:10px;color:var(--sky);cursor:pointer;font-weight:600;" onclick="editAppt('${a.id}')">✎ Edit</div>
             <div style="font-size:10px;color:var(--pink-dark);cursor:pointer;" onclick="deleteAppt('${a.id}')">✕ Remove</div>

@@ -39,9 +39,10 @@ create table if not exists public.appointments (
   created timestamptz default now()
 );
 
--- Recurring appointments (added 2026-07-20)
+-- Recurring appointments + end times (added 2026-07-20)
 alter table public.appointments add column if not exists repeat text;
 alter table public.appointments add column if not exists series_id text;
+alter table public.appointments add column if not exists end_time text;
 
 create table if not exists public.crm_tasks (
   id       text primary key,
