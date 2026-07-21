@@ -3026,7 +3026,23 @@
     showToast('✓ Series removed (' + n + ' appointments)');
   }
 
+  // True when an edit sheet is closing with changes the user never saved
+  function _apptHasUnsavedChanges() {
+    if (!_editApptId) return false;
+    const a = DB.get('appointments').find(x => x.id === _editApptId);
+    if (!a) return false;
+    return (document.getElementById('apptTitle').value || '').trim() !== (a.title || '') ||
+           document.getElementById('apptDate').value !== (a.date || '') ||
+           document.getElementById('apptTime').value !== (a.time || '') ||
+           document.getElementById('apptEndTime').value !== (a.endTime || '') ||
+           document.getElementById('apptCat').value !== (a.cat || 'work') ||
+           (document.getElementById('apptNotes').value || '').trim() !== (a.notes || '');
+  }
+
   function resetApptSheet() {
+    if (_apptHasUnsavedChanges()) {
+      showToast('⚠️ Changes NOT saved — reopen it and tap ✓ Save Changes');
+    }
     _editApptId = null;
     document.getElementById('apptTitle').value = '';
     document.getElementById('apptTime').value  = '';
