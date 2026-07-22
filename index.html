@@ -845,9 +845,11 @@
 
     <div class="card">
       <div class="card-title">Recent Activity</div>
+      <div id="recentActivity">
         <div style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;line-height:1.6;">
           No activity yet.<br>Start by scanning a card or adding a contact.
         </div>
+      </div>
     </div>
   </div>
 
@@ -1158,14 +1160,16 @@
       <!-- Recipients -->
       <div class="form-group">
         <label class="form-label">Recipients</label>
-        <div class="invite-recipients" style="min-height:52px;">
+        <div class="invite-recipients" style="min-height:52px;" id="inv-recipients">
           <span style="color:var(--text-muted);font-size:12px;align-self:center;">No recipients yet — add from your contacts below</span>
         </div>
         <div class="pills-scroll" style="margin-bottom:0;">
-          <div class="pill" style="border-color:var(--gold);" onclick="showToast('All Networking contacts added')">+ All Networking</div>
-          <div class="pill" style="border-color:var(--gold-bright);" onclick="showToast('New contacts added')">+ New (30-day)</div>
-          <div class="pill">+ Pick</div>
+          <div class="pill" style="border-color:var(--gold);" onclick="invAddGroup('inv','networking')">+ All Networking</div>
+          <div class="pill" style="border-color:var(--gold-bright);" onclick="invAddGroup('inv','new30')">+ New (30-day)</div>
+          <div class="pill" onclick="invTogglePick('inv')">+ Pick</div>
+          <div class="pill" style="border-color:var(--pink-light);" onclick="invClear('inv')">Clear</div>
         </div>
+        <div id="inv-picker" style="display:none;max-height:180px;overflow-y:auto;background:var(--white);border:1px solid var(--border);border-radius:10px;margin-top:8px;padding:6px 10px;"></div>
       </div>
 
       <!-- Send From -->
@@ -1189,7 +1193,7 @@
             <div class="acct-addr">robin@scoutre.net</div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Replies go to the selected account's inbox</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">The email opens in your Mail app — double-check the "From" line there before sending</div>
       </div>
 
       <!-- ── INVITE DESIGNER ── -->
@@ -1253,7 +1257,8 @@
         </div>
       </div>
 
-      <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="closeSheet('invite');showToast('🤝 Invites sent via robin@enjoyyourhaven.com')">Send Invites</button>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">The invite text opens in your Mail app with everyone on BCC. To include your flyer image, drag it into the email there before hitting send.</div>
+      <button class="btn btn-gold btn-block" style="margin-top:10px;" onclick="sendInvites('inv')">✉️ Open Email with Invites</button>
     </div>
   </div>
 </div>
@@ -1266,13 +1271,15 @@
     <div class="sheet-body">
       <div class="form-group">
         <label class="form-label">Invite</label>
-        <div class="invite-recipients" style="min-height:52px;">
+        <div class="invite-recipients" style="min-height:52px;" id="pinv-recipients">
           <span style="color:var(--text-muted);font-size:12px;align-self:center;">No recipients yet — add from your contacts</span>
         </div>
         <div class="pills-scroll" style="margin-bottom:0;">
-          <div class="pill" style="border-color:var(--navy);" onclick="showToast('All Personal contacts added')">+ All Personal</div>
-          <div class="pill">+ Pick</div>
+          <div class="pill" style="border-color:var(--navy);" onclick="invAddGroup('pinv','personal')">+ All Personal</div>
+          <div class="pill" onclick="invTogglePick('pinv')">+ Pick</div>
+          <div class="pill" style="border-color:var(--pink-light);" onclick="invClear('pinv')">Clear</div>
         </div>
+        <div id="pinv-picker" style="display:none;max-height:180px;overflow-y:auto;background:var(--white);border:1px solid var(--border);border-radius:10px;margin-top:8px;padding:6px 10px;"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Send Via</label>
@@ -1341,7 +1348,8 @@
         </div>
       </div>
 
-      <button class="btn btn-navy btn-block" style="margin-top:14px;" onclick="closeSheet('personalInvite');showToast('🔵 Personal invites sent!')">Send Invites</button>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">Opens in your Mail app with everyone on BCC — add your photo by dragging it into the email there.</div>
+      <button class="btn btn-navy btn-block" style="margin-top:10px;" onclick="sendInvites('pinv')">✉️ Open Email with Invites</button>
     </div>
   </div>
 </div>
@@ -2090,29 +2098,174 @@
     if (ft) ft.textContent = g.type;
   }
 
-  // ── EVENT INVITE FLYER UPLOAD + LAYOUT PICKER ──
-  function triggerFlyerUpload(prefix) {
-    let input = document.getElementById(prefix + '-flyer-file');
-    if (!input) {
-      input = document.createElement('input');
-      input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
-      input.id = prefix + '-flyer-file';
-      document.body.appendChild(input);
-      input.addEventListener('change', () => {
-        const f = input.files[0];
-        if (!f) return;
-        const zone = document.getElementById(prefix + '-upload-zone');
-        if (zone) zone.innerHTML = `<img src="${URL.createObjectURL(f)}" style="max-width:100%;max-height:140px;border-radius:10px;" alt="Flyer">`;
-        const sect = document.getElementById(prefix + '-layout-section');
-        if (sect) sect.style.display = '';
-      });
+  // ── INVITES: real recipients from contacts → email via the Mail app ──
+  const _invSel = { inv: new Set(), pinv: new Set() };
+  const _invImg = { inv: null, pinv: null };
+  const _invLayout = { inv: 'header', pinv: 'header' };
+  const _invDefaultPreview = {};
+  const _lastInviteEvent = { inv: null, pinv: null };
+
+  function _contactName(c) { return [c.firstName, c.lastName].filter(Boolean).join(' ') || c.company || 'Contact'; }
+
+  function invAddGroup(prefix, group) {
+    const now = Date.now(), thirtyD = 30 * 24 * 60 * 60 * 1000;
+    let list = DB.get('contacts');
+    if (group === 'networking') list = list.filter(c => c.cat === 'networking' || c.cat === 'new');
+    if (group === 'new30')      list = list.filter(c => (now - new Date(c.added).getTime()) < thirtyD);
+    if (group === 'personal')   list = list.filter(c => c.cat === 'personal');
+    if (!list.length) { showToast('No contacts in that group yet'); return; }
+    list.forEach(c => _invSel[prefix].add(c.id));
+    renderInvRecipients(prefix);
+    _renderInvPicker(prefix);
+  }
+
+  function _renderInvPicker(prefix) {
+    const box = document.getElementById(prefix + '-picker');
+    if (!box || box.style.display === 'none') return;
+    box.innerHTML = DB.get('contacts').map(c => `
+      <label style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--mist);font-size:13px;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:var(--sky);" ${_invSel[prefix].has(c.id) ? 'checked' : ''} onchange="invToggleContact('${prefix}','${c.id}',this.checked)">
+        <span style="flex:1;">${_contactName(c)}</span>
+        <span style="font-size:11px;color:var(--text-muted);">${c.email || 'no email'}</span>
+      </label>`).join('');
+  }
+
+  function invTogglePick(prefix) {
+    const box = document.getElementById(prefix + '-picker');
+    if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+    if (!DB.get('contacts').length) { showToast('No contacts yet — add some first'); return; }
+    box.style.display = '';
+    _renderInvPicker(prefix);
+  }
+
+  function invToggleContact(prefix, id, on) {
+    if (on) _invSel[prefix].add(id); else _invSel[prefix].delete(id);
+    renderInvRecipients(prefix);
+  }
+
+  function invRemove(prefix, id) { _invSel[prefix].delete(id); renderInvRecipients(prefix); _renderInvPicker(prefix); }
+  function invClear(prefix)      { _invSel[prefix].clear();   renderInvRecipients(prefix); _renderInvPicker(prefix); }
+
+  function renderInvRecipients(prefix) {
+    const box = document.getElementById(prefix + '-recipients');
+    if (!box) return;
+    const contacts = DB.get('contacts');
+    const sel = [..._invSel[prefix]].map(id => contacts.find(c => c.id === id)).filter(Boolean);
+    if (!sel.length) {
+      box.innerHTML = '<span style="color:var(--text-muted);font-size:12px;align-self:center;">No recipients yet — add from your contacts below</span>';
+      return;
     }
-    input.click();
+    box.innerHTML = sel.map(c => `
+      <span style="display:inline-flex;align-items:center;gap:6px;background:var(--mist);border:1px solid var(--border);border-radius:14px;padding:4px 10px;font-size:12px;margin:2px;">
+        ${_contactName(c)}${c.email ? '' : ' <em style="color:var(--pink-dark);font-size:10px;">no email</em>'}
+        <span style="cursor:pointer;color:var(--pink-dark);font-weight:700;" onclick="invRemove('${prefix}','${c.id}')">✕</span>
+      </span>`).join('') + `<div style="width:100%;font-size:11px;color:var(--text-muted);margin-top:4px;">${sel.length} selected</div>`;
+  }
+
+  function sendInvites(prefix) {
+    const contacts = DB.get('contacts');
+    const sel = [..._invSel[prefix]].map(id => contacts.find(c => c.id === id)).filter(Boolean);
+    if (!sel.length) { showToast('⚠️ Add at least one recipient first'); return; }
+    const withEmail = sel.filter(c => (c.email || '').trim());
+    const skipped = sel.length - withEmail.length;
+    const emails = [...new Set(withEmail.map(c => c.email.trim().toLowerCase()))];
+    if (!emails.length) { showToast('⚠️ None of the selected contacts have an email address'); return; }
+    if (emails.length > 40) { showToast('⚠️ Email links max out around 40 people — Clear and send in batches'); return; }
+
+    const ev = _lastInviteEvent[prefix];
+    const subject = ev ? "You're invited: " + ev.title : "You're invited!";
+    const when = ev && ev.date
+      ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) +
+        (ev.time ? ' · ' + fmtTime(ev.time) + (ev.endTime ? ' – ' + fmtTime(ev.endTime) : '') : '')
+      : '';
+    const lines = ['Hi!', '', ev ? "You're invited to " + ev.title + '.' : "You're invited!"];
+    if (when) lines.push('', 'When: ' + when);
+    if (ev && ev.notes) lines.push('Details: ' + ev.notes);
+    lines.push('', 'Please reply to let me know if you can make it!', '');
+    lines.push(prefix === 'inv' ? 'Robin Frazier\nHaven Property Services · enjoyyourhaven.com' : 'Robin');
+
+    window.location.href = 'mailto:?bcc=' + encodeURIComponent(emails.join(',')) +
+      '&subject=' + encodeURIComponent(subject) +
+      '&body=' + encodeURIComponent(lines.join('\n'));
+    showToast('✉️ Opening your email — ' + emails.length + ' recipient' + (emails.length !== 1 ? 's' : '') +
+      (skipped > 0 ? ' · ' + skipped + ' skipped (no email)' : ''));
+  }
+
+  // ── INVITE FLYER + LAYOUT + LIVE PREVIEW ──
+  function triggerFlyerUpload(prefix) {
+    const input = document.getElementById(prefix + '-file-input');
+    if (input) input.click();
+  }
+
+  function handleFlyerUpload(prefix, input) {
+    const f = input.files[0];
+    if (!f) return;
+    if (f.type === 'application/pdf') { showToast('⚠️ PDFs can\'t be previewed — use a JPG or PNG'); input.value = ''; return; }
+    _invImg[prefix] = URL.createObjectURL(f);
+    const zone = document.getElementById(prefix + '-upload-zone');
+    if (zone) zone.innerHTML = `<img src="${_invImg[prefix]}" style="max-width:100%;max-height:120px;border-radius:8px;" alt="Flyer"><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Tap to choose a different image</div>`;
+    const sect = document.getElementById(prefix + '-layout-section');
+    if (sect) sect.style.display = '';
+    const tag = document.getElementById(prefix + '-design-mode');
+    if (tag) tag.textContent = 'Custom image';
+    updateInvitePreview(prefix);
+    input.value = '';
   }
 
   function setInvLayout(prefix, layout, el) {
+    _invLayout[prefix] = layout;
     document.querySelectorAll('#' + prefix + '-layout-section .layout-opt').forEach(o => o.classList.remove('active'));
     if (el) el.classList.add('active');
+    updateInvitePreview(prefix);
+  }
+
+  function updateInvitePreview(prefix) {
+    const wrap = document.getElementById(prefix + '-preview-wrap');
+    if (!wrap) return;
+    if (!(prefix in _invDefaultPreview)) _invDefaultPreview[prefix] = wrap.innerHTML;
+    const holder = document.createElement('div');
+    holder.innerHTML = _invDefaultPreview[prefix];
+    const brandBar = holder.querySelector('.inv-brand-bar');
+    const body = holder.querySelector('.inv-body');
+    const brandToggle = document.getElementById(prefix + '-brand-toggle');
+    const brandOn = !brandToggle || !brandToggle.classList.contains('off');
+    const img = _invImg[prefix], layout = _invLayout[prefix] || 'header';
+
+    let html = '';
+    if (brandOn && brandBar) html += brandBar.outerHTML;
+    if (!img) {
+      html += body ? body.outerHTML : '';
+    } else if (layout === 'flyer') {
+      html += `<img src="${img}" style="width:100%;display:block;" alt="Flyer">`;
+    } else if (layout === 'card') {
+      html += `<div style="display:flex;align-items:stretch;"><img src="${img}" style="width:40%;object-fit:cover;" alt="Flyer"><div style="flex:1;">${body ? body.outerHTML : ''}</div></div>`;
+    } else if (layout === 'bg') {
+      html += `<div style="background-image:url('${img}');background-size:cover;background-position:center;"><div style="background:rgba(255,255,255,0.88);">${body ? body.innerHTML : ''}</div></div>`;
+    } else { // header banner
+      html += `<img src="${img}" style="width:100%;max-height:140px;object-fit:cover;display:block;" alt="Flyer">` + (body ? body.outerHTML : '');
+    }
+    wrap.innerHTML = html;
+  }
+
+  // ── RECENT ACTIVITY (home, from real data) ──
+  function renderRecentActivity() {
+    const box = document.getElementById('recentActivity');
+    if (!box) return;
+    const items = [];
+    DB.get('contacts').forEach(c => items.push({ t: Date.parse(c.added) || 0, icon: '👤', bg: 'var(--green-pale)', text: 'Added contact — <strong>' + _contactName(c) + '</strong>' }));
+    const seenSeries = new Set();
+    DB.get('appointments').forEach(a => {
+      if (a.seriesId) { if (seenSeries.has(a.seriesId)) return; seenSeries.add(a.seriesId); }
+      items.push({ t: Date.parse(a.created) || 0, icon: '📅', bg: '#E3F2FD', text: 'Scheduled — <strong>' + a.title + '</strong>' + (a.seriesId ? ' 🔁' : '') });
+    });
+    DB.get('emailLogs').forEach(l => items.push({ t: Date.parse(l.date) || 0, icon: l.direction === 'sent' ? '📤' : '📥', bg: 'var(--mist)', text: 'Email logged — <strong>' + l.subject + '</strong>' }));
+    DB.get('tasks').forEach(k => items.push({ t: Date.parse(k.created) || 0, icon: k.done ? '✅' : '📝', bg: 'var(--pink-pale)', text: (k.done ? 'Completed' : 'Added') + ' task — <strong>' + k.title + '</strong>' }));
+    const top = items.filter(i => i.t).sort((a, b) => b.t - a.t).slice(0, 6);
+    if (!top.length) {
+      box.innerHTML = '<div style="text-align:center;padding:24px 10px;color:var(--text-muted);font-size:13px;line-height:1.6;">No activity yet.<br>Start by scanning a card or adding a contact.</div>';
+      return;
+    }
+    box.innerHTML = top.map(i => `<div class="activity-item"><div class="activity-icon" style="background:${i.bg};">${i.icon}</div><div><div class="activity-text">${i.text}</div><div class="activity-time">${new Date(i.t).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div></div></div>`).join('');
   }
 
   // ── TOAST ──
@@ -2367,21 +2520,21 @@
     document.querySelectorAll('#hourSlots .hour-slot').forEach(s => {
       s.classList.toggle('slot-on', biz.includes(s.textContent));
     });
-    showToast('Business hours preset applied');
+    showToast('Preview only — takes effect once email sync is connected');
   }
   function earlyBirdPreset() {
     const early = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM'];
     document.querySelectorAll('#hourSlots .hour-slot').forEach(s => {
       s.classList.toggle('slot-on', early.includes(s.textContent));
     });
-    showToast('Early bird preset applied');
+    showToast('Preview only — takes effect once email sync is connected');
   }
   function selectFreq(type, el) {
     document.querySelectorAll('.freq-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
     document.getElementById('bizHoursPanel').style.display  = (type === 'biz') ? '' : 'none';
     document.getElementById('onceDailyPanel').style.display = (type === 'once') ? '' : 'none';
-    if (type === 'hour') showToast('Every-hour sync set for 8 AM – 6 PM Mon–Fri');
+    if (type === 'hour') showToast('Preview only — takes effect once email sync is connected');
   }
 
   // ── VOICE MEMO ──
@@ -3249,7 +3402,10 @@
     ['evName','evDate','evTime','evEndTime','evLocation','evDesc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     buildCalendar(); refreshWeekViewIfVisible(); renderTodaySchedule(); updateHomeStats(); renderEvents();
     showToast('✓ Event saved to calendar');
-    if (openInvites) openSheet('invite');
+    if (openInvites) {
+      _lastInviteEvent.inv = { title: name, date, time, endTime, notes: [loc, desc].filter(Boolean).join(' — ') };
+      openSheet('invite');
+    }
   }
 
   function savePersonalEvent(openInvites) {
@@ -3273,7 +3429,10 @@
     ['pevName','pevDate','pevTime','pevEndTime','pevLocation'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     buildCalendar(); refreshWeekViewIfVisible(); renderTodaySchedule(); updateHomeStats(); renderEvents();
     showToast('✓ Personal event saved');
-    if (openInvites) openSheet('personalInvite');
+    if (openInvites) {
+      _lastInviteEvent.pinv = { title: name, date, time, endTime, notes: [kind, loc].filter(Boolean).join(' — ') };
+      openSheet('personalInvite');
+    }
   }
 
   function renderEvents() {
@@ -3666,6 +3825,8 @@
     // Update contacts subtitle
     const sub = document.getElementById('contactsSub');
     if (sub && contacts.length) sub.textContent = `${contacts.length} contact${contacts.length!==1?'s':''} · tap to view`;
+
+    renderRecentActivity();
   }
 
   // ── DYNAMIC CALENDAR (reads from localStorage) ──
