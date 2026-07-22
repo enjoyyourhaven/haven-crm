@@ -2386,7 +2386,7 @@
 
   // ── VOICE MEMO ──
   let vmRecTimer = null, vmSeconds = 0, vmRecognition = null;
-  let vmLiveText = '', vmMediaRecorder = null, vmActiveId = null;
+  let vmLiveText = '', vmActiveId = null;
 
   function buildVoiceMemo(id) {
     const bars = Array.from({length:14}, () => '<div class="vm-bar"></div>').join('');
@@ -2429,7 +2429,7 @@
           <div class="vm-transcript">
             <div class="vm-transcript-label">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              AI Transcript
+              Transcript
             </div>
             <div class="vm-transcript-text" id="vm-${id}-text"><span class="vm-transcript-cursor"></span></div>
             <div class="vm-edit-btn" onclick="vmEditTranscript('${id}')">Edit transcript</div>
@@ -2441,6 +2441,15 @@
   }
 
   function vmStart(id) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      // iPads/iPhones (especially home-screen apps) often don't allow live
+      // transcription — the keyboard's mic key works everywhere instead.
+      showToast('🎙️ Live transcription isn\'t available here — tap the note box and use the 🎤 key on the keyboard');
+      const t = document.getElementById('vm-' + id + '-typed');
+      if (t) t.focus();
+      return;
+    }
     vmActiveId = id; vmSeconds = 0; vmLiveText = '';
     document.getElementById('vm-' + id + '-idle').style.display = 'none';
     document.getElementById('vm-' + id + '-rec').style.display  = '';
@@ -2451,32 +2460,35 @@
       document.getElementById('vm-' + id + '-timer').textContent = m + ':' + (s<10?'0':'') + s;
       if (vmSeconds >= 120) vmStop(id);
     }, 1000);
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SR) {
-      try {
-        vmRecognition = new SR();
-        vmRecognition.continuous = true; vmRecognition.interimResults = true; vmRecognition.lang = 'en-US';
-        vmRecognition.onresult = e => { let f=''; for (let i=e.resultIndex;i<e.results.length;i++) if (e.results[i].isFinal) f += e.results[i][0].transcript+' '; if (f) vmLiveText += f; };
-        vmRecognition.start();
-      } catch(err) { vmRecognition = null; }
-    }
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({audio:true}).then(stream => {
-        vmMediaRecorder = new MediaRecorder(stream); window._vmStream = stream; vmMediaRecorder.start();
-      }).catch(() => {});
-    }
+    try {
+      vmRecognition = new SR();
+      vmRecognition.continuous = true; vmRecognition.interimResults = true; vmRecognition.lang = 'en-US';
+      vmRecognition.onresult = e => { let f=''; for (let i=e.resultIndex;i<e.results.length;i++) if (e.results[i].isFinal) f += e.results[i][0].transcript+' '; if (f) vmLiveText += f; };
+      vmRecognition.onerror = e => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          showToast('⚠️ Microphone blocked — allow it: Settings → Safari → Microphone');
+          vmStop(id);
+        }
+      };
+      vmRecognition.start();
+    } catch (err) { vmRecognition = null; }
   }
 
   function vmStop(id) {
     clearInterval(vmRecTimer);
     if (vmRecognition) { try { vmRecognition.stop(); } catch(e) {} }
-    if (vmMediaRecorder && vmMediaRecorder.state !== 'inactive') { vmMediaRecorder.stop(); if (window._vmStream) window._vmStream.getTracks().forEach(t => t.stop()); }
     const m = Math.floor(vmSeconds/60), s = vmSeconds%60;
     document.getElementById('vm-' + id + '-rec').style.display  = 'none';
     document.getElementById('vm-' + id + '-done').style.display = '';
     document.getElementById('vm-' + id + '-dur').textContent    = m + ':' + (s<10?'0':'') + s;
-    const text = vmLiveText.trim() || 'Met at networking event — interested in property management services. Follow up to send Haven info packet and schedule a call.';
-    vmTypeTranscript(id, text);
+    const text = vmLiveText.trim();
+    if (text) {
+      vmTypeTranscript(id, text);
+    } else {
+      // Never invent words: say plainly that nothing came through
+      const el = document.getElementById('vm-' + id + '-text');
+      if (el) el.innerHTML = '<em style="color:var(--text-muted);">Nothing came through — tap Re-record to try again, or type your note below (the keyboard 🎤 key works great).</em>';
+    }
   }
 
   function vmTypeTranscript(id, text) {
@@ -2490,9 +2502,16 @@
   }
 
   function vmPlay(id) {
-    const text = document.getElementById('vm-' + id + '-text').textContent;
-    if ('speechSynthesis' in window && text) { const u = new SpeechSynthesisUtterance(text); u.rate=0.95; window.speechSynthesis.speak(u); }
-    showToast('▶ Playing voice memo…');
+    const el = document.getElementById('vm-' + id + '-text');
+    const text = el ? el.textContent.trim() : '';
+    if (!text || text.startsWith('Nothing came through')) { showToast('No transcript to play'); return; }
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(text); u.rate = 0.95;
+      window.speechSynthesis.speak(u);
+      showToast('▶ Reading the transcript aloud…');
+    } else {
+      showToast('Playback isn\'t supported on this device');
+    }
   }
 
   function vmReset(id) {
