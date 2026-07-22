@@ -911,37 +911,38 @@
 <div class="screen" id="screen-scan">
   <div class="screen-title">Scan Business Card</div>
   <div class="screen-sub">Auto-tagged ⭐ yellow for 30 days · record a voice memo on the spot</div>
-  <div class="card-drop-zone" id="dropZone" onclick="simulateScan()">
+  <div class="card-drop-zone" id="dropZone" onclick="document.getElementById('scanInput').click()">
     <div class="drop-icon">🪪</div>
     <div class="drop-text"><strong>Tap to take a photo</strong><br>or choose from your library</div>
   </div>
-  <div class="scan-progress" id="scanProgress"><div class="spinner"></div> AI is reading the card…</div>
-  <div class="scan-result" id="scanResult"><div class="scan-result-label">⭐ AI Extracted — new contact (30-day yellow tag auto-applied)</div><div id="scanResultContent"></div></div>
+  <input type="file" id="scanInput" accept="image/*" capture="environment" style="display:none;" onchange="handleCardScan(this)">
+  <div class="scan-progress" id="scanProgress"><div class="spinner"></div> <span id="scanProgressLabel">Reading the card…</span></div>
+  <div class="scan-result" id="scanResult"><div class="scan-result-label">⭐ Read from the card — check the form below, fix anything, then save</div><div id="scanResultContent"></div></div>
   <div id="scanFormShell"></div>
-  <div class="card" style="margin-top:14px;">
-    <div class="card-title">✏️ Or enter manually</div>
+  <div class="card" style="margin-top:14px;" id="scanManualCard">
+    <div class="card-title" id="scanFormTitle">✏️ Or enter manually</div>
     <div class="form-2col">
-      <div class="form-group"><label class="form-label">First Name</label><input class="form-input" placeholder="First"></div>
-      <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" placeholder="Last"></div>
+      <div class="form-group"><label class="form-label">First Name</label><input class="form-input" id="sFirstName" placeholder="First"></div>
+      <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" id="sLastName" placeholder="Last"></div>
     </div>
-    <div class="form-group"><label class="form-label">Company</label><input class="form-input" placeholder="Company (optional)"></div>
+    <div class="form-group"><label class="form-label">Company</label><input class="form-input" id="sCompany" placeholder="Company (optional)"></div>
     <div class="form-2col">
-      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" placeholder="email@…"></div>
-      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" placeholder="(214)…"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="sEmail" placeholder="email@…"></div>
+      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="sPhone" placeholder="(214)…"></div>
     </div>
     <div class="form-group">
       <label class="form-label">Color Category</label>
-      <select class="form-select">
-        <option>🤝 Gold — Networking</option>
-        <option>🟢 Green — Work / Business</option>
-        <option>🔵 Navy — Personal</option>
+      <select class="form-select" id="sCat">
+        <option value="networking">🤝 Gold — Networking</option>
+        <option value="work">🟢 Green — Work / Business</option>
+        <option value="personal">🔵 Navy — Personal</option>
       </select>
     </div>
     <div style="background:var(--gold-bright-pale);border:1px solid var(--gold-bright);border-radius:10px;padding:10px 12px;font-size:12px;color:#7A5C00;margin-bottom:13px;">
       ⭐ This contact will automatically show as <strong>yellow (New)</strong> for 30 days, then shift to your selected category color.
     </div>
     <div id="vm-manual-container"></div>
-    <button class="btn btn-green btn-block" onclick="showToast('⭐ Contact saved — yellow for 30 days')">Save Contact</button>
+    <button class="btn btn-green btn-block" onclick="saveScannedContact()">Save Contact</button>
   </div>
 </div>
 
@@ -2509,28 +2510,138 @@
   }
 
   // ── SCAN ──
+  // ── REAL CARD SCANNING (Tesseract.js OCR, loaded on first use) ──
   function simulateScan() {
     if (currentTab !== 'scan') switchTab('scan');
-    const zone=document.getElementById('dropZone'), prog=document.getElementById('scanProgress');
-    const res=document.getElementById('scanResult'), cont=document.getElementById('scanResultContent');
-    const shell=document.getElementById('scanFormShell');
+    document.getElementById('scanInput').click();
+  }
+
+  let _tessPromise = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (!_tessPromise) {
+      _tessPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = resolve;
+        s.onerror = () => { _tessPromise = null; reject(new Error('Tesseract failed to load')); };
+        document.head.appendChild(s);
+      });
+    }
+    return _tessPromise;
+  }
+
+  function resetScanZone() {
+    const zone = document.getElementById('dropZone');
+    zone.classList.remove('scanning');
+    zone.innerHTML = '<div class="drop-icon">🪪</div><div class="drop-text"><strong>Tap to take a photo</strong><br>or choose from your library</div>';
+  }
+
+  // Pull name / company / email / phone out of raw OCR text
+  function parseCardText(text) {
+    const lines = text.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l.length > 1);
+    const emailM = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+    const phoneM = text.match(/(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+    const isContactLine = l => /@|www\.|http|\.com\b|\.net\b|\.org\b/i.test(l) || /\d{3}[\s.-]?\d{4}/.test(l);
+    const COMPANY_HINT = /llc|inc\b|realty|group|properties|property|services|company|co\.|corp|associates|team|homes|solutions|construction|renovations?|management|title|mortgage|lending|insurance/i;
+    const TITLE_HINT = /realtor|agent|broker|owner|president|manager|director|founder|ceo|specialist|consultant|coordinator/i;
+
+    let name = '', company = '';
+    for (const l of lines) {
+      if (isContactLine(l)) continue;
+      if (!company && COMPANY_HINT.test(l)) { company = l; continue; }
+      if (!name && !TITLE_HINT.test(l) && /^[A-Za-z .,'&-]{3,40}$/.test(l) && l.split(' ').length <= 4) { name = l; continue; }
+    }
+    if (!company) company = lines.find(l => l !== name && !isContactLine(l) && !TITLE_HINT.test(l)) || '';
+
+    const parts = name.split(' ').filter(Boolean);
+    return {
+      firstName: parts[0] || '',
+      lastName:  parts.slice(1).join(' '),
+      company,
+      email: emailM ? emailM[0] : '',
+      phone: phoneM ? phoneM[0].trim() : ''
+    };
+  }
+
+  async function handleCardScan(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const zone = document.getElementById('dropZone');
+    const prog = document.getElementById('scanProgress');
+    const label = document.getElementById('scanProgressLabel');
+    const res  = document.getElementById('scanResult');
+    const cont = document.getElementById('scanResultContent');
+
     zone.classList.add('scanning');
-    zone.innerHTML='<div class="drop-icon">📸</div><div class="drop-text">Processing card…</div>';
-    prog.classList.add('show'); res.classList.remove('show'); shell.innerHTML='';
-    setTimeout(() => {
-      zone.classList.remove('scanning'); prog.classList.remove('show');
-      // AI extracts real contact info from the scanned card
-      const ex={name:'[Extracted from card]',title:'[Title]',company:'[Company]',email:'[Email]',phone:'[Phone]'};
-      cont.innerHTML=Object.entries(ex).map(([k,v])=>`<div class="scan-field"><b>${k}</b>${v}</div>`).join('');
+    zone.innerHTML = `<img src="${URL.createObjectURL(file)}" style="max-width:100%;max-height:180px;border-radius:10px;" alt="Business card">`;
+    label.textContent = 'Warming up the reader…';
+    prog.classList.add('show');
+    res.classList.remove('show');
+
+    try {
+      await loadTesseract();
+      label.textContent = 'Reading the card… (10–20 seconds)';
+      const { data } = await Tesseract.recognize(file, 'eng');
+      prog.classList.remove('show');
+      zone.classList.remove('scanning');
+      const text = (data && data.text || '').trim();
+      if (!text) {
+        showToast('⚠️ No text found — try a closer, brighter photo');
+        return;
+      }
+      const p = parseCardText(text);
+      document.getElementById('sFirstName').value = p.firstName;
+      document.getElementById('sLastName').value  = p.lastName;
+      document.getElementById('sCompany').value   = p.company;
+      document.getElementById('sEmail').value     = p.email;
+      document.getElementById('sPhone').value     = p.phone;
+
+      cont.innerHTML = [
+        ['Name',    [p.firstName, p.lastName].filter(Boolean).join(' ') || '—'],
+        ['Company', p.company || '—'],
+        ['Email',   p.email   || '—'],
+        ['Phone',   p.phone   || '—']
+      ].map(([k, v]) => `<div class="scan-field"><b>${k}</b>${v}</div>`).join('');
       res.classList.add('show');
-      zone.innerHTML='<div class="drop-icon">✅</div><div class="drop-text"><strong>Card scanned!</strong> ⭐ Auto-tagged yellow for 30 days.</div>';
-      shell.innerHTML=`
-        <div class="form-group"><label class="form-label">Category after 30 days</label>
-          <select class="form-select"><option>🤝 Gold — Networking</option><option>🟢 Green — Work</option></select>
-        </div>
-        ${buildVoiceMemo('scan')}
-        <button class="btn btn-yellow btn-block" style="color:var(--text);margin-top:4px;" onclick="showToast('⭐ Contact saved — yellow for 30 days')">Save Contact</button>`;
-    }, 2200);
+      document.getElementById('scanFormTitle').textContent = '✅ Check & fix, then save';
+      document.getElementById('scanManualCard').scrollIntoView({ behavior: 'smooth' });
+      showToast('⭐ Card read — check the details below');
+    } catch (e) {
+      console.error('card scan', e);
+      prog.classList.remove('show');
+      resetScanZone();
+      showToast('⚠️ Could not read the card — check your internet, or type it in below');
+    } finally {
+      input.value = '';
+    }
+  }
+
+  function saveScannedContact() {
+    const g = id => (document.getElementById(id).value || '').trim();
+    const firstName = g('sFirstName'), lastName = g('sLastName'), company = g('sCompany');
+    const email = g('sEmail'), phone = g('sPhone');
+    const cat = document.getElementById('sCat').value || 'networking';
+    if (!firstName && !lastName && !company) { showToast('⚠️ Please enter at least a name'); return; }
+    const vmNotes = document.getElementById('vm-manual-typed');
+    const notes = vmNotes ? (vmNotes.value || '').trim() : '';
+
+    DB.add('contacts', {
+      id: 'contact_' + Date.now(),
+      firstName, lastName, company, email, phone, cat, notes,
+      color: nextColor(),
+      added: new Date().toISOString()
+    });
+
+    ['sFirstName','sLastName','sCompany','sEmail','sPhone'].forEach(id => { document.getElementById(id).value = ''; });
+    if (vmNotes) vmNotes.value = '';
+    document.getElementById('scanResult').classList.remove('show');
+    document.getElementById('scanFormTitle').textContent = '✏️ Or enter manually';
+    resetScanZone();
+    renderContacts();
+    updateHomeStats();
+    showToast('⭐ Contact saved — yellow for 30 days');
+    switchTab('contacts');
   }
 
   // ══════════════════════════════════════════
